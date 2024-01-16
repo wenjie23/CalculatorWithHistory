@@ -7,6 +7,9 @@
 
 class EquationQueue;
 class ElementDisplay;
+class QPropertyAnimation;
+class Menu;
+class QToolButton;
 
 struct ElementPath : public QPainterPath
 {
@@ -26,6 +29,9 @@ public:
 
 private slots:
     void setUpdateToTrue();
+    void pasteAllResults();
+    void toggleConnection(bool show);
+    void clearAllHistory();
 
 private:
     std::shared_ptr<EquationQueue> _equations;
@@ -34,8 +40,16 @@ private:
     void drawPaths();
     static QPainterPath calcPath(const QPointF& start, const QPointF& end);
     std::vector<ElementPath> _paths;
+    QToolButton* _menuButton;
+    Menu* _menu;
+    QPropertyAnimation* _animation;
 
     ElementPath generatePath(ElementDisplay* one, ElementDisplay* other);
+
+    void showMenu();
+    void hideMenu();
+
+    bool _showConnections = true;
 };
 
 #endif // DISPLAY_H

@@ -5,9 +5,17 @@
 #include <QtMath>
 #include <QRandomGenerator>
 #include <QPointer>
+#include <QPushButton>
+#include <QVBoxLayout>
 #include <algorithm>
 #include <unordered_set>
+#include <QPropertyAnimation>
+#include <QApplication>
+#include <QClipboard>
+#include <QToolButton>
 #include <memory>
+
+#include "menu.h"
 
 namespace {
 static const int g_bigPointSize = 48;
@@ -15,11 +23,28 @@ static const int g_smallPointSize = 24;
 static const int g_normalHistSizePointSize = 30;
 } // namespace
 
+ElementPath::ElementPath(const QPointF& start, const QPointF& end, const QColor& color)
+    : _color(color)
+{
+    moveTo(start);
+    const double dx = end.x() - start.x();
+    const double dy = end.y() - start.y();
+    const double dist = qSqrt(dx * dx + dy * dy);
+    const double angle = qAtan2(dy, dx);
+    const double offsetX = dist * 0.15 * qCos(angle + (dx > 0 ? M_PI / 8 : -M_PI / 8));
+    const double offsetY = dist * 0.15 * qSin(angle + (dx > 0 ? M_PI / 8 : -M_PI / 8));
+
+    const QPointF c1(start.x() + offsetX, start.y() + offsetY);
+    const QPointF c2(end.x() - offsetX, end.y() - offsetY);
+
+    cubicTo(c1, c2, end);
+}
+
 class ElementDisplay : public QLabel
 {
 public:
     ElementDisplay(QWidget* parent) : ElementDisplay(parent, nullptr) {}
-    ElementDisplay(QWidget* parent, Element* element) : QLabel(parent)
+    ElementDisplay(QWidget* parent, Element* element, bool showConnection = true) : QLabel(parent)
     {
         setAlignment(Qt::AlignLeft | Qt::AlignBottom);
         setFont(QFont("Arial", g_bigPointSize));
@@ -30,7 +55,7 @@ public:
     void paintEvent(QPaintEvent* event) override
     {
         QLabel::paintEvent(event);
-        if (_previous || !_nexts.empty()) {
+        if (showConnections && (_previous || !_nexts.empty())) {
             QPainter painter(this);
             QPen pen(_connectColor.spec() == QColor::Invalid ? Qt::gray : _connectColor, 1.2);
             pen.setStyle(Qt::DashLine);
@@ -74,6 +99,7 @@ public:
     bool hasNext() const { return !_nexts.empty(); }
 
     std::vector<QPointer<ElementDisplay>>& nexts() { return _nexts; };
+    static void setShowConnections(bool show) { showConnections = show; }
 
 private:
     void updateElementText()
@@ -93,9 +119,43 @@ private:
     std::vector<QPointer<ElementDisplay>> _nexts;
     QPointer<ElementDisplay> _previous = nullptr;
     QColor _connectColor;
+    static bool showConnections;
 };
+bool ElementDisplay::showConnections = true;
 
-Display::Display(QWidget* parent) {}
+Display::Display(QWidget* parent)
+{
+    _menu = new Menu(this);
+    connect(_menu->pasteButton(), &QAbstractButton::clicked, this, &Display::pasteAllResults);
+    connect(_menu->connectionButton(), &QAbstractButton::toggled, this, &Display::toggleConnection);
+    connect(_menu->clearButton(), &QAbstractButton::clicked, this, &Display::clearAllHistory);
+
+    _menu->show();
+    _menu->move(20, 0);
+    _animation = new QPropertyAnimation(_menu, "pos", this);
+    _animation->setDuration(300);
+    _animation->setEasingCurve(QEasingCurve::InOutQuad);
+
+    _menuButton = new QToolButton(this);
+    QIcon menuIcon;
+    menuIcon.addFile(QString::fromUtf8(":/Button/resource/menu_hamburger.png"), QSize(),
+                     QIcon::Normal, QIcon::Off);
+    _menuButton->setIcon(menuIcon);
+    _menuButton->setStyleSheet(_menu->styleSheet());
+    _menuButton->setFixedSize({34, 30});
+    _menuButton->setCheckable(true);
+    _menuButton->move(4, 3);
+    _menuButton->setWindowFlag(Qt::WindowStaysOnTopHint);
+    connect(_menuButton, &QPushButton::toggled, this, [this]() {
+        if (_menuButton->isChecked())
+            showMenu();
+        else
+            hideMenu();
+    });
+
+    _menu->raise();
+    _menuButton->raise();
+}
 
 void Display::setEquations(const std::shared_ptr<EquationQueue>& equations)
 {
@@ -145,8 +205,10 @@ void Display::setUpdateToTrue()
 
 void Display::paintEvent(QPaintEvent* event)
 {
+    QPainter painter(this);
     if (!_needUpdateElements || !_equations) {
-        drawPaths();
+        if (_showConnections)
+            drawPaths();
         update();
         QWidget::paintEvent(event);
         return;
@@ -234,16 +296,19 @@ void Display::paintEvent(QPaintEvent* event)
         }
     }
 
-    QPainter painter(this);
     {
         //        QPainterPath path;
         //        path.moveTo(30, 30);
         //        path.lineTo(200, 200);
         //        painter.drawPath(path);
     }
-    drawPaths();
+    if (_showConnections)
+        drawPaths();
+
     QWidget::paintEvent(event);
     _needUpdateElements = false;
+    _menu->raise();
+    _menuButton->raise();
 }
 
 ElementPath Display::generatePath(ElementDisplay* one, ElementDisplay* other)
@@ -261,6 +326,49 @@ ElementPath Display::generatePath(ElementDisplay* one, ElementDisplay* other)
                        other->pos() + QPointF(one->width() / 2, 0), color);
 }
 
+void Display::showMenu()
+{
+    qDebug() << __func__ << _menu->pos() << _menu->size();
+    _animation->setStartValue(_menu->pos());
+    _animation->setEndValue(QPoint(0, _menu->y()));
+    _animation->start();
+}
+void Display::hideMenu()
+{
+    qDebug() << __func__ << _menu->pos() << _menu->size() << _menu->x();
+    _animation->setStartValue(_menu->pos());
+    _animation->setEndValue(QPoint(-_menu->width(), _menu->y()));
+    _animation->start();
+}
+
+void Display::pasteAllResults()
+{
+    QString result;
+    for (const auto& line : _elementsDisplay) {
+        for (const auto* elementDisplay : line)
+            result.append(elementDisplay->text());
+        result.append('\n');
+    }
+    result = result.trimmed();
+    if (result.size() > 0)
+        QApplication::clipboard()->setText(result);
+}
+
+void Display::toggleConnection(bool show)
+{
+    if (_showConnections == show)
+        return;
+    _showConnections = show;
+    ElementDisplay::setShowConnections(show);
+    update();
+}
+
+void Display::clearAllHistory()
+{
+    _equations->clear();
+    emit _equations->changed();
+}
+
 void Display::drawPaths()
 {
     QPainter painter(this);
@@ -271,21 +379,4 @@ void Display::drawPaths()
         painter.setPen(pen);
         painter.drawPath(path);
     }
-}
-
-ElementPath::ElementPath(const QPointF& start, const QPointF& end, const QColor& color)
-    : _color(color)
-{
-    moveTo(start);
-    const double dx = end.x() - start.x();
-    const double dy = end.y() - start.y();
-    const double dist = qSqrt(dx * dx + dy * dy);
-    const double angle = qAtan2(dy, dx);
-    const double offsetX = dist * 0.15 * qCos(angle + (dx > 0 ? M_PI / 8 : -M_PI / 8));
-    const double offsetY = dist * 0.15 * qSin(angle + (dx > 0 ? M_PI / 8 : -M_PI / 8));
-
-    const QPointF c1(start.x() + offsetX, start.y() + offsetY);
-    const QPointF c2(end.x() - offsetX, end.y() - offsetY);
-
-    cubicTo(c1, c2, end);
 }

@@ -16,10 +16,14 @@ QtApplication {
         "calculator.h",
         "display.cpp",
         "display.h",
+        "icons.qrc",
         "main.cpp",
         "mainwindow.cpp",
         "mainwindow.h",
         "mainwindow.ui",
+        "menu.cpp",
+        "menu.h",
+        "menu.ui",
     ]
 
     install: true

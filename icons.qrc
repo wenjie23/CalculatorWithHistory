@@ -1,0 +1,14 @@
+<RCC>
+    <qresource prefix="/Button">
+        <file>resource/red_cross.png</file>
+        <file>resource/dash_rect.png</file>
+        <file>resource/paste.png</file>
+        <file>resource/menu_hamburger.png</file>
+    </qresource>
+    <qresource prefix="/App">
+        <file>resource/app_icon.png</file>
+    </qresource>
+    <qresource prefix="/Style">
+        <file>Adaptic.qss</file>
+    </qresource>
+</RCC>
