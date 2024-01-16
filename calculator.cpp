@@ -123,14 +123,6 @@ void Calculator::unaryOperatorClicked(const QString& op)
 
 void Calculator::binaryOperatorClicked(const QString& op)
 {
-    if (!_operator.isEmpty()) {
-        _value = calculate(_operand, _value, _operator);
-    }
-    updateDisplay();
-    _operand = _value;
-    _operator = op;
-    _value = 0;
-
     _equationQueue->append(op);
     updateDisplay();
 }
@@ -143,13 +135,6 @@ void Calculator::dotClicked()
 
 void Calculator::equalClicked()
 {
-    if (!_operator.isEmpty()) {
-        _value = calculate(_operand, _value, _operator);
-        updateDisplay();
-    }
-    _operator.clear();
-    _operand = 0;
-
     _equationQueue->append(QString('='));
     updateDisplay();
 }
@@ -178,21 +163,6 @@ void Calculator::clear()
         _equationQueue->back().elements().clear();
     }
     emit _equationQueue->changed();
-}
-
-double Calculator::calculate(double left, double right, const QString& op)
-{
-    if (op == QString("+")) {
-        return left + right;
-    } else if (op == QString("-")) {
-        return left - right;
-    } else if (op == QString("*")) {
-        return left * right;
-    } else if (op == QString("/")) {
-        return left / right;
-    } else {
-        return 0;
-    }
 }
 
 void Calculator::updateDisplay() { _display->update(); }

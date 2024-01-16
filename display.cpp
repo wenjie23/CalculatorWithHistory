@@ -54,8 +54,10 @@ public:
     }
     void clearAllNext()
     {
+        qDebug() << _nexts;
         while (!_nexts.empty()) {
-            _nexts.back()->_previous = nullptr;
+            if (_nexts.back())
+                _nexts.back()->_previous = nullptr;
             _nexts.pop_back();
         }
     }
@@ -104,7 +106,7 @@ void Display::setUpdateToTrue()
     } else if (_equations->size() < _elementsDisplay.size()) {
         while (_equations->size() < _elementsDisplay.size()) {
             while (!_elementsDisplay.back().empty()) {
-                _elementsDisplay.back().back()->deleteLater();
+                delete _elementsDisplay.back().back();
                 _elementsDisplay.back().pop_back();
             }
             _elementsDisplay.pop_back();
@@ -137,76 +139,87 @@ void Display::setUpdateToTrue()
 
 void Display::paintEvent(QPaintEvent* event)
 {
-    qDebug() << _elementsDisplay.size();
     if (!_needUpdateElements || !_equations) {
+        drawPaths();
+
+        update();
         QWidget::paintEvent(event);
         return;
-    }
+    } else {
+        const int xMargin = 1;
+        const int yMargin = 3;
 
-    const int xMargin = 1;
-    const int yMargin = 3;
+        int lastX = width();
+        int lastY = height();
 
-    int lastX = width();
-    int lastY = height();
-
-    qDebug() << "line:" << _elementsDisplay.size();
-    if (!_elementsDisplay.empty()) {
-        qDebug() << "equation size" << _elementsDisplay.back().size();
-    }
-    for (int line = _elementsDisplay.size() - 1; line >= 0; --line) {
-        for (int column = _elementsDisplay[line].size() - 1; column >= 0; --column) {
-            auto* display = _elementsDisplay[line][column];
-            display->show();
-            display->adjustSize();
-            lastX -= display->width() + xMargin;
-            display->move(lastX, lastY - display->height());
+        qDebug() << "line:" << _elementsDisplay.size();
+        if (!_elementsDisplay.empty()) {
+            qDebug() << "equation size" << _elementsDisplay.back().size();
         }
-
-        if (line == _elementsDisplay.size() - 2 && !_elementsDisplay.back().empty()) {
+        for (int line = _elementsDisplay.size() - 1; line >= 0; --line) {
             for (int column = _elementsDisplay[line].size() - 1; column >= 0; --column) {
-                auto& displayFromPreviousLine = _elementsDisplay[line][column];
-                displayFromPreviousLine->clearAllNext();
-                if (_elementsDisplay.back().empty())
-                    continue;
+                auto* display = _elementsDisplay[line][column];
+                display->show();
+                display->adjustSize();
+                lastX -= display->width() + xMargin;
+                display->move(lastX, lastY - display->height());
+            }
+            if (line != _elementsDisplay.size() - 2 || _elementsDisplay.back().empty()) {
+                lastX = width();
+                lastY -= _elementsDisplay.back().back()->height() + yMargin;
+                continue;
+            }
 
+            for (int column = _elementsDisplay[line].size() - 1; column >= 0; --column) {
+                auto* displayFromPreviousLine = _elementsDisplay[line][column];
+                displayFromPreviousLine->clearAllNext();
+                auto* previousLinerElement =
+                    dynamic_cast<Number*>(displayFromPreviousLine->element());
+                if (!previousLinerElement)
+                    continue;
                 for (int latestDisplayC = _elementsDisplay.back().size() - 1; latestDisplayC >= 0;
                      --latestDisplayC) {
-                    auto* dispaly = dynamic_cast<Number*>(displayFromPreviousLine->element());
-                    if (!_elementsDisplay.back()[latestDisplayC]->element())
+                    auto* elementInLastLine = _elementsDisplay.back()[latestDisplayC]->element();
+                    if (!elementInLastLine)
                         continue;
-                    auto* latestDisplay =
-                        dynamic_cast<Number*>(_elementsDisplay.back()[latestDisplayC]->element());
+                    auto* latestDisplay = dynamic_cast<Number*>(elementInLastLine);
 
-                    if (dispaly && latestDisplay && dispaly->text() == latestDisplay->text()) {
+                    if (latestDisplay && previousLinerElement->text() == latestDisplay->text()) {
                         displayFromPreviousLine->addNext(_elementsDisplay.back()[latestDisplayC]);
                     }
                 }
             }
-        }
 
-        lastX = width();
-        lastY -= _elementsDisplay.back().back()->height() + yMargin;
+            lastX = width();
+            lastY -= _elementsDisplay.back().back()->height() + yMargin;
+        }
     }
 
+    _paths.clear();
     for (int r = 0; r < _elementsDisplay.size(); ++r) {
         for (int c = 0; c < _elementsDisplay[r].size(); ++c) {
             auto* const display = _elementsDisplay[r][c];
             for (const auto& next : display->nexts()) {
                 if (!next)
                     continue;
-                drowConnections(display, next);
+                _paths.push_back(generatePath(display, next));
             }
         }
     }
 
     QPainter painter(this);
-    painter.setRenderHint(QPainter::Antialiasing);
-    painter.end();
-    update();
+    {
+        //        QPainterPath path;
+        //        path.moveTo(30, 30);
+        //        path.lineTo(200, 200);
+        //        painter.drawPath(path);
+    }
+    drawPaths();
     QWidget::paintEvent(event);
+    _needUpdateElements = false;
 }
 
-void Display::drowConnections(ElementDisplay* one, ElementDisplay* other)
+ElementPath Display::generatePath(ElementDisplay* one, ElementDisplay* other)
 {
     QColor color;
     if (one->connectColor().spec() != QColor::Invalid) {
@@ -217,35 +230,36 @@ void Display::drowConnections(ElementDisplay* one, ElementDisplay* other)
         one->setConnectColor(color);
     }
     other->setConnectColor(color);
-
-    const auto path = calcPath(QPointF(one->pos()) + QPointF(one->width() / 2, one->height()),
-                               other->pos() + QPointF(one->width() / 2, 0));
-
-    //    color.setHsl(144, 92, 158);
-    QPainter painter(this);
-    QPen pen(color, 1.6);
-    pen.setStyle(Qt::DashLine);
-    painter.setPen(pen);
-    painter.setRenderHint(QPainter::Antialiasing);
-    painter.drawPath(path);
+    return ElementPath(QPointF(one->pos()) + QPointF(one->width() / 2, one->height()),
+                       other->pos() + QPointF(one->width() / 2, 0), color);
 }
 
-QPainterPath Display::calcPath(const QPointF& start, const QPointF& end)
+void Display::drawPaths()
 {
-    QPainterPath path;
-    path.moveTo(start);
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing);
+    for (const auto& path : _paths) {
+        QPen pen(path._color, 1.6);
+        pen.setStyle(Qt::DashLine);
+        painter.setPen(pen);
+        painter.drawPath(path);
+    }
+}
+
+ElementPath::ElementPath(const QPointF& start, const QPointF& end, const QColor& color)
+    : _color(color)
+{
+    moveTo(start);
     const double dx = end.x() - start.x();
     const double dy = end.y() - start.y();
     const double dist = qSqrt(dx * dx + dy * dy);
     const double angle = qAtan2(dy, dx);
-    const double offset = dist * 0.15;
+    const double offsetX = dist * 0.15 * qCos(angle + (dx > 0 ? M_PI / 8 : -M_PI / 8));
+    const double offsetY = dist * 0.15 * qSin(angle + (dx > 0 ? M_PI / 8 : -M_PI / 8));
 
-    QPointF c1(start.x() + offset * qCos(angle + M_PI / 8),
-               start.y() - offset * qSin(angle + M_PI / 8));
+    const QPointF c1(start.x() + offsetX, start.y() + offsetY);
+    const QPointF c2(end.x() - offsetX, end.y() - offsetY);
 
-    QPointF c2(end.x() - offset * qCos(angle + M_PI / 8),
-               end.y() + offset * qSin(angle + M_PI / 8));
-
-    path.cubicTo(c1, c2, end);
-    return path;
+    cubicTo(c1, c2, end);
+    //    lineTo(end);
 }

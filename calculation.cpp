@@ -188,7 +188,9 @@ void EquationQueue::append(const QString& op)
         return;
     if (back().completed()) {
         Equation equation;
-        equation.push_back(back().elements().back());
+        auto newElement = std::make_shared<Number>();
+        newElement->setValue(static_cast<Number*>(back().elements().back().get())->value());
+        equation.push_back(newElement);
         equation.append(op);
         push_back((equation));
         emit changed();

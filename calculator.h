@@ -29,8 +29,6 @@ private slots:
     void clear();
 
 private:
-    double calculate(double left, double right, const QString& op);
-
     void updateDisplay();
 
     Display* _display;
