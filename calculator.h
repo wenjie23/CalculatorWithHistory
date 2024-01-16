@@ -16,12 +16,15 @@ class Calculator : public QWidget
 public:
     Calculator(QWidget* parent = nullptr);
 
+    void keyPressEvent(QKeyEvent* event) override;
+
 private slots:
     void digitClicked(int digit);
     void unaryOperatorClicked(const QString& op);
     void binaryOperatorClicked(const QString& op);
     void dotClicked();
     void equalClicked();
+    void enterClicked();
 
     void clear();
 

@@ -20,6 +20,8 @@ public:
     Number(double v) : Element() { _text = QString::number(v); }
     ~Number() = default;
     double value() const { return _text.toDouble(); }
+    void setValue(double v) { _text = QString::number(v); }
+    bool trySetValue(const QString& s);
     void appendDigit(const int digit) { _text += QString::number(digit); }
     void appendDecimal();
     QString text() const override;
@@ -49,6 +51,8 @@ public:
     void append(const QString& op);
     void appendDecimal();
     QString text() const;
+    bool empty() const;
+    void pop();
     bool completed() const { return _completed; }
     void push_back(const std::shared_ptr<Element>& element);
     std::vector<std::shared_ptr<Element>>& elements() { return _elements; }
@@ -67,6 +71,7 @@ public:
     void append(int digit);
     void appendDicimal();
     void append(const QString& op);
+    void popLastCharacter();
 
     QString text() const;
 

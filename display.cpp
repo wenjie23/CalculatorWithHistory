@@ -3,6 +3,7 @@
 #include <QDebug>
 #include <QPainterPath>
 #include <QtMath>
+#include <QRandomGenerator>
 
 class ElementDisplay : public QLabel
 {
@@ -13,7 +14,13 @@ public:
     {
         setAlignment(Qt::AlignLeft | Qt::AlignBottom);
         setFont(QFont("Arial", 24));
-        setText(element ? element->text() : " ");
+        QString textToShow;
+        if (element) {
+            textToShow = element->text();
+            if (textToShow.size() > 1 && textToShow[0] == '-')
+                textToShow = QStringLiteral("(").append(textToShow).append(QStringLiteral(")"));
+        }
+        setText(textToShow);
         setMargin(2);
     }
 
@@ -22,7 +29,7 @@ public:
         QLabel::paintEvent(event);
         if (_connected) {
             QPainter painter(this);
-            QPen pen(Qt::gray, 1.2);
+            QPen pen(_connectColor.spec() == QColor::Invalid ? Qt::gray : _connectColor, 1.2);
             pen.setStyle(Qt::DashLine);
             painter.setPen(pen);
             painter.setRenderHint(QPainter::Antialiasing);
@@ -33,10 +40,13 @@ public:
     Element* element() const { return _element.get(); }
     void setConnected(bool connect) { _connected = connect; }
     bool connected() const { return _connected; }
+    QColor connectColor() const { return _connectColor; }
+    void setConnectColor(const QColor color) { _connectColor = color; }
 
 private:
     std::shared_ptr<Element> _element;
     bool _connected = false;
+    QColor _connectColor;
 };
 
 Display::Display(QWidget* parent) {}
@@ -101,12 +111,22 @@ void Display::drowConnections(ElementDisplay* one, ElementDisplay* other)
 {
     one->setConnected(true);
     other->setConnected(true);
+    QColor color;
+    if (one->connectColor().spec() != QColor::Invalid) {
+        color = one->connectColor();
+    } else {
+        auto* random = QRandomGenerator::global();
+        color.setHsl(144, 92, 158);
+        one->setConnectColor(color);
+    }
+    other->setConnectColor(color);
 
     const auto path = calcPath(QPointF(one->pos()) + QPointF(one->width() / 2, one->height()),
                                other->pos() + QPointF(one->width() / 2, 0));
 
+    color.setHsl(144, 92, 158);
     QPainter painter(this);
-    QPen pen(Qt::gray, 1.2);
+    QPen pen(color, 1.6);
     pen.setStyle(Qt::DashLine);
     painter.setPen(pen);
     painter.setRenderHint(QPainter::Antialiasing);

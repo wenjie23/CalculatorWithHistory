@@ -2,6 +2,7 @@
 #include <QLCDNumber>
 #include <QPushButton>
 #include <QGridLayout>
+#include <QKeyEvent>
 #include <QtMath>
 #include <array>
 #include <QDebug>
@@ -46,9 +47,11 @@ Calculator::Calculator(QWidget* parent) : QWidget(parent)
     }
 
     _dotButton = new QPushButton(".");
+    _dotButton->setShortcut(Qt::Key_Period);
     connect(_dotButton, &QPushButton::clicked, this, &Calculator::dotClicked);
 
     _equalButton = new QPushButton("=");
+    _equalButton->setShortcut(Qt::Key_Equal);
     connect(_equalButton, &QPushButton::clicked, this, &Calculator::equalClicked);
 
     _clearButton = new QPushButton("C");
@@ -74,7 +77,7 @@ Calculator::Calculator(QWidget* parent) : QWidget(parent)
     setLayout(_layout);
 
     setWindowTitle("Calculator with History");
-    setFixedSize(630, 300);
+    setFixedSize(640, 300);
     const auto allPButtons = findChildren<QPushButton*>();
     for (auto* button : allPButtons) {
         button->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
@@ -83,13 +86,40 @@ Calculator::Calculator(QWidget* parent) : QWidget(parent)
     }
 }
 
+void Calculator::keyPressEvent(QKeyEvent* event)
+{
+    if (event->key() == Qt::Key_Enter) {
+        enterClicked();
+    } else if (event->key() == Qt::Key_Backspace) {
+        _equationQueue->popLastCharacter();
+    }
+    qDebug() << event->key();
+    QWidget::keyPressEvent(event);
+}
+
 void Calculator::digitClicked(int digit)
 {
     _equationQueue->append(digit);
     updateDisplay();
 }
 
-void Calculator::unaryOperatorClicked(const QString& op) {}
+void Calculator::unaryOperatorClicked(const QString& op)
+{
+    if (_equationQueue->empty() || _equationQueue->back().empty() ||
+        !dynamic_cast<Number*>(_equationQueue->back().elements().back().get()))
+        return;
+    auto* const number = static_cast<Number*>(_equationQueue->back().elements().back().get());
+    const auto numberText = number->text();
+    if (op == QStringLiteral("+/-")) {
+        if (numberText[0] == '-') {
+            number->trySetValue(numberText.right(numberText.size() - 1));
+        } else {
+            number->trySetValue(QStringLiteral("-").append(numberText));
+        }
+    } else if (op == QStringLiteral("%")) {
+        number->trySetValue(QString::number(numberText.toDouble() / 100));
+    }
+}
 
 void Calculator::binaryOperatorClicked(const QString& op)
 {
@@ -105,7 +135,11 @@ void Calculator::binaryOperatorClicked(const QString& op)
     updateDisplay();
 }
 
-void Calculator::dotClicked() { _equationQueue->appendDicimal(); }
+void Calculator::dotClicked()
+{
+    qDebug() << __func__;
+    _equationQueue->appendDicimal();
+}
 
 void Calculator::equalClicked()
 {
@@ -118,6 +152,16 @@ void Calculator::equalClicked()
 
     _equationQueue->append(QString('='));
     updateDisplay();
+}
+
+void Calculator::enterClicked()
+{
+    if (_equationQueue->empty())
+        return;
+    if (_equationQueue->back().completed())
+        _clearButton->animateClick();
+    else
+        _equalButton->animateClick();
 }
 
 void Calculator::clear()

@@ -2,13 +2,11 @@
 #include <cassert>
 #include <QString>
 #include <QDebug>
-
-double Equation::calculate() const
+#include <deque>
+#include <stdexcept>
+namespace {
+double calculateImpl(double left, double right, const QString& op)
 {
-    assert(_elements.size() == 4);
-    double left = static_cast<Number*>(_elements[0].get())->value();
-    double right = static_cast<Number*>(_elements[2].get())->value();
-    QString op = static_cast<Operator*>(_elements[1].get())->text();
     if (op == QString("+")) {
         return left + right;
     } else if (op == QString("-")) {
@@ -19,8 +17,45 @@ double Equation::calculate() const
         return left / right;
     } else if (op == QString("%")) {
     } else {
-        return 0;
+        throw std::invalid_argument("Invalid arguments");
     }
+}
+} // namespace
+double Equation::calculate() const
+{
+    if (_elements.size() < 4 || _elements.back()->text() != "=")
+        throw std::invalid_argument("Invalid arguments");
+    std::deque<std::shared_ptr<Element>> calcuationStack;
+    calcuationStack.push_back(_elements[0]);
+    for (int i = 1; i < _elements.size() - 1; ++i) {
+        if (calcuationStack.empty() || dynamic_cast<Operator*>(_elements[i].get())) {
+            calcuationStack.push_back(_elements[i]);
+            continue;
+        }
+        if (!calcuationStack.empty() && dynamic_cast<Operator*>(calcuationStack.back().get())) {
+            if (calcuationStack.back()->text() == "*" || calcuationStack.back()->text() == "/") {
+                const QString op = calcuationStack.back()->text();
+                calcuationStack.pop_back();
+                double value = calcuationStack.back()->text().toDouble();
+                calcuationStack.pop_back();
+                calcuationStack.push_back(std::make_shared<Number>(
+                    calculateImpl(value, static_cast<Number*>(_elements[i].get())->value(), op)));
+                continue;
+            }
+        }
+        calcuationStack.push_back(_elements[i]);
+    }
+
+    double resultSoFar = calcuationStack.front()->text().toDouble();
+    calcuationStack.pop_front();
+    while (!calcuationStack.empty()) {
+        QString op = calcuationStack.front()->text();
+        calcuationStack.pop_front();
+        double right = calcuationStack.front()->text().toDouble();
+        calcuationStack.pop_front();
+        resultSoFar = calculateImpl(resultSoFar, right, op);
+    }
+    return resultSoFar;
 }
 
 void Equation::append(int digit)
@@ -35,7 +70,9 @@ void Equation::append(int digit)
 
 void Equation::append(const QString& op)
 {
-    if (_elements.empty() || completed())
+    if (_elements.empty() || completed() || dynamic_cast<Operator*>(_elements.back().get()))
+        return;
+    if (_elements.size() < 3 && op == QString("="))
         return;
     _elements.push_back(std::make_shared<Operator>(op));
     if (op == QString("=")) {
@@ -67,7 +104,43 @@ QString Equation::text() const
     return result;
 }
 
+bool Equation::empty() const
+{
+    return elements().empty() || _elements[0]->text() == QStringLiteral(" ") ||
+           _elements[0]->text() == QStringLiteral("");
+}
+
+void Equation::pop()
+{
+    if (empty())
+        return;
+    if (dynamic_cast<Operator*>(_elements.back().get())) {
+        _elements.pop_back();
+        return;
+    }
+    auto* number = static_cast<Number*>(_elements.back().get());
+    QString numberText = number->text();
+    if (numberText.isEmpty()) {
+        _elements.pop_back();
+        return pop();
+    }
+    numberText.resize(numberText.size() - 1);
+    const bool successful = number->trySetValue(numberText);
+    if (!successful)
+        _elements.pop_back();
+}
+
 void Equation::push_back(const std::shared_ptr<Element>& element) { _elements.push_back(element); }
+
+bool Number::trySetValue(const QString& s)
+{
+    bool ok;
+    s.toDouble(&ok);
+    if (!ok)
+        return false;
+    _text = s;
+    return true;
+}
 
 void Number::appendDecimal()
 {
@@ -117,6 +190,13 @@ void EquationQueue::append(const QString& op)
     }
     back().append(op);
     popFrontIfExceedLimit();
+}
+
+void EquationQueue::popLastCharacter()
+{
+    if (empty() || back().completed() || back().empty())
+        return;
+    back().pop();
 }
 
 QString EquationQueue::text() const
