@@ -177,7 +177,7 @@ void Calculator::clear()
     } else {
         _equationQueue->back().elements().clear();
     }
-    updateDisplay();
+    emit _equationQueue->changed();
 }
 
 double Calculator::calculate(double left, double right, const QString& op)

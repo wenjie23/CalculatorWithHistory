@@ -1,16 +1,21 @@
 #ifndef CALCULATION_H
 #define CALCULATION_H
 
+#include <QObject>
 #include <QString>
 #include <vector>
 #include <deque>
 
-class Element
+class Element : public QObject
 {
+    Q_OBJECT
 public:
     Element() = default;
     virtual ~Element() = default;
     virtual QString text() const = 0;
+
+signals:
+    void changed();
 };
 
 class Number : public Element
@@ -20,9 +25,17 @@ public:
     Number(double v) : Element() { _text = QString::number(v); }
     ~Number() = default;
     double value() const { return _text.toDouble(); }
-    void setValue(double v) { _text = QString::number(v); }
+    void setValue(double v)
+    {
+        _text = QString::number(v);
+        emit changed();
+    }
     bool trySetValue(const QString& s);
-    void appendDigit(const int digit) { _text += QString::number(digit); }
+    void appendDigit(const int digit)
+    {
+        _text += QString::number(digit);
+        emit changed();
+    }
     void appendDecimal();
     QString text() const override;
 
@@ -63,8 +76,9 @@ private:
     bool _completed = false;
 };
 
-class EquationQueue : public std::deque<Equation>
+class EquationQueue : public QObject, public std::deque<Equation>
 {
+    Q_OBJECT
 public:
     EquationQueue(size_t sizeLimit = 999) : std::deque<Equation>(), _sizeLimit(sizeLimit){};
 
@@ -74,6 +88,9 @@ public:
     void popLastCharacter();
 
     QString text() const;
+
+signals:
+    void changed();
 
 private:
     void popFrontIfExceedLimit()

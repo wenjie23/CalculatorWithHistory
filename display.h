@@ -14,10 +14,14 @@ public:
     ~Display(){};
 
     void paintEvent(QPaintEvent* event) override;
-    void setEquations(const std::shared_ptr<EquationQueue>& equations) { _equations = equations; }
+    void setEquations(const std::shared_ptr<EquationQueue>& equations);
+
+private slots:
+    void setUpdateToTrue();
 
 private:
     std::shared_ptr<EquationQueue> _equations;
+    bool _needUpdateElements = false;
     std::vector<std::vector<ElementDisplay*>> _elementsDisplay;
     void drowConnections(ElementDisplay* one, ElementDisplay* other);
     static QPainterPath calcPath(const QPointF& start, const QPointF& end);

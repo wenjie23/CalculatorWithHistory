@@ -139,6 +139,7 @@ bool Number::trySetValue(const QString& s)
     if (!ok)
         return false;
     _text = s;
+    emit changed();
     return true;
 }
 
@@ -147,8 +148,10 @@ void Number::appendDecimal()
     bool ok;
     QString newText = _text + QString(".");
     auto parsed = newText.toDouble(&ok);
-    if (ok)
+    if (ok) {
         _text = newText;
+        emit changed();
+    }
 }
 
 QString Number::text() const { return _text; }
@@ -167,6 +170,7 @@ void EquationQueue::append(int digit)
         back().append(digit);
     }
     popFrontIfExceedLimit();
+    emit changed();
 }
 
 void EquationQueue::appendDicimal()
@@ -175,6 +179,7 @@ void EquationQueue::appendDicimal()
         emplace_back();
     }
     back().appendDecimal();
+    emit changed();
 }
 
 void EquationQueue::append(const QString& op)
@@ -186,10 +191,12 @@ void EquationQueue::append(const QString& op)
         equation.push_back(back().elements().back());
         equation.append(op);
         push_back((equation));
+        emit changed();
         return;
     }
     back().append(op);
     popFrontIfExceedLimit();
+    emit changed();
 }
 
 void EquationQueue::popLastCharacter()
@@ -197,6 +204,7 @@ void EquationQueue::popLastCharacter()
     if (empty() || back().completed() || back().empty())
         return;
     back().pop();
+    emit changed();
 }
 
 QString EquationQueue::text() const
