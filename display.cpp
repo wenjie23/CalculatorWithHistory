@@ -9,6 +9,12 @@
 #include <unordered_set>
 #include <memory>
 
+namespace {
+static const int g_bigPointSize = 48;
+static const int g_smallPointSize = 24;
+static const int g_normalHistSizePointSize = 30;
+} // namespace
+
 class ElementDisplay : public QLabel
 {
 public:
@@ -16,7 +22,7 @@ public:
     ElementDisplay(QWidget* parent, Element* element) : QLabel(parent)
     {
         setAlignment(Qt::AlignLeft | Qt::AlignBottom);
-        setFont(QFont("Arial", 24));
+        setFont(QFont("Arial", g_bigPointSize));
         setElement(element);
         setMargin(2);
     }
@@ -101,6 +107,7 @@ void Display::setEquations(const std::shared_ptr<EquationQueue>& equations)
 
 void Display::setUpdateToTrue()
 {
+    _needUpdateElements = true;
     if (_equations->size() > _elementsDisplay.size()) {
         _elementsDisplay.emplace_back();
     } else if (_equations->size() < _elementsDisplay.size()) {
@@ -133,7 +140,6 @@ void Display::setUpdateToTrue()
             lineOfDisplay[i]->setElement(equation.elements()[i].get());
         }
     }
-    _needUpdateElements = true;
     return;
 }
 
@@ -141,58 +147,79 @@ void Display::paintEvent(QPaintEvent* event)
 {
     if (!_needUpdateElements || !_equations) {
         drawPaths();
-
         update();
         QWidget::paintEvent(event);
         return;
-    } else {
-        const int xMargin = 1;
-        const int yMargin = 3;
+    }
 
-        int lastX = width();
-        int lastY = height();
+    const int xMargin = 1;
+    const int yMargin = 3;
 
-        qDebug() << "line:" << _elementsDisplay.size();
-        if (!_elementsDisplay.empty()) {
-            qDebug() << "equation size" << _elementsDisplay.back().size();
+    int lastX = width();
+    int lastY = height();
+
+    qDebug() << "line:" << _elementsDisplay.size();
+    if (!_elementsDisplay.empty()) {
+        qDebug() << "equation size" << _elementsDisplay.back().size();
+    }
+    for (int line = _elementsDisplay.size() - 1; line >= 0; --line) {
+        for (int column = _elementsDisplay[line].size() - 1; column >= 0; --column) {
+            auto* display = _elementsDisplay[line][column];
+            if (line < _elementsDisplay.size() - 1 &&
+                display->font().pointSize() > g_smallPointSize) {
+                QFont font = display->font();
+                font.setPointSize(g_normalHistSizePointSize);
+                display->setFont(font);
+            }
+            display->adjustSize();
+            display->show();
+            lastX -= display->width() + xMargin;
+            display->move(lastX, lastY - display->height());
         }
-        for (int line = _elementsDisplay.size() - 1; line >= 0; --line) {
+        while (lastX < 0 && line == _elementsDisplay.size() - 1 &&
+               !_elementsDisplay[line].empty()) {
+            QFont font = _elementsDisplay[line].back()->font();
+            font.setPointSize(font.pointSize() - 2);
+            if (font.pointSize() < g_smallPointSize)
+                break;
+            lastX = width();
             for (int column = _elementsDisplay[line].size() - 1; column >= 0; --column) {
                 auto* display = _elementsDisplay[line][column];
-                display->show();
+                display->setFont(font);
                 display->adjustSize();
+                display->show();
                 lastX -= display->width() + xMargin;
                 display->move(lastX, lastY - display->height());
             }
-            if (line != _elementsDisplay.size() - 2 || _elementsDisplay.back().empty()) {
-                lastX = width();
-                lastY -= _elementsDisplay.back().back()->height() + yMargin;
+        }
+
+        if (line != _elementsDisplay.size() - 2 || _elementsDisplay.back().empty()) {
+            lastX = width();
+            lastY -= _elementsDisplay[line].back()->height() + yMargin;
+            continue;
+        }
+
+        for (int column = _elementsDisplay[line].size() - 1; column >= 0; --column) {
+            auto* displayFromPreviousLine = _elementsDisplay[line][column];
+            displayFromPreviousLine->clearAllNext();
+            auto* previousLinerElement = dynamic_cast<Number*>(displayFromPreviousLine->element());
+            if (!previousLinerElement)
                 continue;
-            }
-
-            for (int column = _elementsDisplay[line].size() - 1; column >= 0; --column) {
-                auto* displayFromPreviousLine = _elementsDisplay[line][column];
-                displayFromPreviousLine->clearAllNext();
-                auto* previousLinerElement =
-                    dynamic_cast<Number*>(displayFromPreviousLine->element());
-                if (!previousLinerElement)
+            for (int latestDisplayC = _elementsDisplay.back().size() - 1; latestDisplayC >= 0;
+                 --latestDisplayC) {
+                auto* elementInLastLine = _elementsDisplay.back()[latestDisplayC]->element();
+                if (!elementInLastLine)
                     continue;
-                for (int latestDisplayC = _elementsDisplay.back().size() - 1; latestDisplayC >= 0;
-                     --latestDisplayC) {
-                    auto* elementInLastLine = _elementsDisplay.back()[latestDisplayC]->element();
-                    if (!elementInLastLine)
-                        continue;
-                    auto* latestDisplay = dynamic_cast<Number*>(elementInLastLine);
+                auto* latestDisplay = dynamic_cast<Number*>(elementInLastLine);
 
-                    if (latestDisplay && previousLinerElement->text() == latestDisplay->text()) {
-                        displayFromPreviousLine->addNext(_elementsDisplay.back()[latestDisplayC]);
-                    }
+                if (latestDisplay && previousLinerElement->text() == latestDisplay->text()) {
+                    displayFromPreviousLine->addNext(_elementsDisplay.back()[latestDisplayC]);
                 }
             }
-
-            lastX = width();
-            lastY -= _elementsDisplay.back().back()->height() + yMargin;
         }
+
+        lastX = width();
+        lastY -= _elementsDisplay[line].back()->height() + yMargin;
     }
 
     _paths.clear();
@@ -261,5 +288,4 @@ ElementPath::ElementPath(const QPointF& start, const QPointF& end, const QColor&
     const QPointF c2(end.x() - offsetX, end.y() - offsetY);
 
     cubicTo(c1, c2, end);
-    //    lineTo(end);
 }

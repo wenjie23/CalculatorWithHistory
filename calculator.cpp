@@ -113,11 +113,14 @@ void Calculator::unaryOperatorClicked(const QString& op)
     if (op == QStringLiteral("+/-")) {
         if (numberText[0] == '-') {
             number->trySetValue(numberText.right(numberText.size() - 1));
+            emit _equationQueue->changed();
         } else {
             number->trySetValue(QStringLiteral("-").append(numberText));
+            emit _equationQueue->changed();
         }
     } else if (op == QStringLiteral("%")) {
         number->trySetValue(QString::number(numberText.toDouble() / 100));
+        emit _equationQueue->changed();
     }
 }
 
