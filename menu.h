@@ -17,9 +17,16 @@ class Menu : public QFrame
 public:
     explicit Menu(QWidget* parent = nullptr);
     ~Menu();
-    QAbstractButton* pasteButton() const;
-    QAbstractButton* connectionButton() const;
-    QAbstractButton* clearButton() const;
+
+signals:
+    void pasteButtonClicked();
+    void connectionButtonToggled(bool checked);
+    void clearButtonClicked();
+
+private slots:
+    void on_clearButton_clicked();
+    void on_connectionSwitch_toggled(bool checked);
+    void on_pasteButton_clicked();
 
 private:
     Ui::Menu* ui;

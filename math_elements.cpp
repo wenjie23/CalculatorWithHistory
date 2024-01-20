@@ -1,35 +1,44 @@
-#include "calculation.h"
-#include <cassert>
-#include <QString>
-#include <QDebug>
+
 #include <deque>
 #include <stdexcept>
+
+#include <QString>
+#include <QDebug>
+#include <iostream>
+
+#include "math_elements.h"
+
+extern const QString g_plus("+");
+extern const QString g_minus("-");
+extern const QString g_multiply("*");
+extern const QString g_divide("÷");
+
 namespace {
 double calculateImpl(double left, double right, const QString& op)
 {
-    if (op == QString("+")) {
+    if (op == g_plus) {
         return left + right;
-    } else if (op == QString("-")) {
+    } else if (op == g_minus) {
         return left - right;
-    } else if (op == QString("*")) {
+    } else if (op == g_multiply) {
         return left * right;
-    } else if (op == QString("/")) {
+    } else if (op == g_divide) {
         return left / right;
-    } else if (op == QString("%")) {
     } else {
         throw std::invalid_argument("Invalid arguments");
+        return -1;
     }
 }
 } // namespace
 double Equation::calculate() const
 {
-    if (_elements.size() < 4 || _elements.back()->text() != "=")
-        throw std::invalid_argument("Invalid arguments");
+    if (size() < 4)
+        throw std::invalid_argument("Invalid");
     std::deque<std::shared_ptr<Element>> calcuationStack;
-    calcuationStack.push_back(_elements[0]);
-    for (int i = 1; i < _elements.size() - 1; ++i) {
-        if (calcuationStack.empty() || dynamic_cast<Operator*>(_elements[i].get())) {
-            calcuationStack.push_back(_elements[i]);
+    calcuationStack.push_back((*this)[0]);
+    for (int i = 1; i < size() - (_completed ? 3 : 1); ++i) {
+        if (calcuationStack.empty() || dynamic_cast<Operator*>((*this)[i].get())) {
+            calcuationStack.push_back((*this)[i]);
             continue;
         }
         if (!calcuationStack.empty() && dynamic_cast<Operator*>(calcuationStack.back().get())) {
@@ -39,11 +48,11 @@ double Equation::calculate() const
                 double value = calcuationStack.back()->text().toDouble();
                 calcuationStack.pop_back();
                 calcuationStack.push_back(std::make_shared<Number>(
-                    calculateImpl(value, static_cast<Number*>(_elements[i].get())->value(), op)));
+                    calculateImpl(value, static_cast<Number*>((*this)[i].get())->value(), op)));
                 continue;
             }
         }
-        calcuationStack.push_back(_elements[i]);
+        calcuationStack.push_back((*this)[i]);
     }
 
     double resultSoFar = calcuationStack.front()->text().toDouble();
@@ -54,30 +63,32 @@ double Equation::calculate() const
         double right = calcuationStack.front()->text().toDouble();
         calcuationStack.pop_front();
         resultSoFar = calculateImpl(resultSoFar, right, op);
+        std::cout << resultSoFar << std::endl;
     }
     return resultSoFar;
 }
 
-void Equation::append(int digit)
+void Equation::append(uint8_t digit)
 {
-    if (_elements.empty() || !dynamic_cast<Number*>(_elements.back().get())) {
-        _elements.push_back(std::make_shared<Number>(digit));
-
-    } else if (auto* casted = dynamic_cast<Number*>(_elements.back().get())) {
+    if (completed())
+        return;
+    if (empty() || !dynamic_cast<Number*>(back().get())) {
+        push_back(std::make_shared<Number>(digit));
+    } else if (auto* casted = dynamic_cast<Number*>(back().get())) {
         casted->appendDigit(digit);
     }
 }
 
 void Equation::append(const QString& op)
 {
-    if (_elements.empty() || completed() || dynamic_cast<Operator*>(_elements.back().get()))
+    if (empty() || completed() || dynamic_cast<Operator*>(back().get()))
         return;
-    if (_elements.size() < 3 && op == QString("="))
+    if (size() < 3 && op == QString("="))
         return;
-    _elements.push_back(std::make_shared<Operator>(op));
+    push_back(std::make_shared<Operator>(op));
     if (op == QString("=")) {
         const double result = calculate();
-        _elements.push_back(std::make_shared<Number>(result));
+        push_back(std::make_shared<Number>(result));
         _completed = true;
     }
 }
@@ -86,51 +97,45 @@ void Equation::appendDecimal()
 {
     if (completed())
         return;
-    if (_elements.empty() || !dynamic_cast<Number*>(_elements.back().get())) {
+    if (empty() || !dynamic_cast<Number*>(back().get())) {
         auto number = std::make_shared<Number>(0);
         number->appendDecimal();
-        _elements.push_back(number);
-    } else if (dynamic_cast<Number*>(_elements.back().get())) {
-        dynamic_cast<Number*>(_elements.back().get())->appendDecimal();
+        push_back(number);
+    } else if (dynamic_cast<Number*>(back().get())) {
+        dynamic_cast<Number*>(back().get())->appendDecimal();
     }
 }
 
 QString Equation::text() const
 {
     QString result;
-    for (const auto& element : _elements) {
+    for (const auto& element : *this) {
         result.append(element->text());
     }
     return result;
 }
 
-bool Equation::empty() const
-{
-    return elements().empty() || _elements[0]->text() == QStringLiteral(" ") ||
-           _elements[0]->text() == QStringLiteral("");
-}
-
-void Equation::pop()
+bool Equation::tryPopCharacter()
 {
     if (empty())
-        return;
-    if (dynamic_cast<Operator*>(_elements.back().get())) {
-        _elements.pop_back();
-        return;
+        return true;
+    if (dynamic_cast<Operator*>(back().get())) {
+        pop_back();
+        return true;
     }
-    auto* number = static_cast<Number*>(_elements.back().get());
+    auto* const number = static_cast<Number*>(back().get());
     QString numberText = number->text();
     if (numberText.isEmpty()) {
-        _elements.pop_back();
-        return pop();
+        pop_back();
+        return tryPopCharacter();
     }
     numberText.resize(numberText.size() - 1);
     const bool successful = number->trySetValue(numberText);
-    if (!successful)
-        _elements.pop_back();
+    if (!successful) {
+        pop_back();
+        return true;
+    }
 }
-
-void Equation::push_back(const std::shared_ptr<Element>& element) { _elements.push_back(element); }
 
 bool Number::trySetValue(const QString& s)
 {
@@ -146,7 +151,7 @@ bool Number::trySetValue(const QString& s)
 void Number::appendDecimal()
 {
     bool ok;
-    QString newText = _text + QString(".");
+    const QString newText = _text + QChar('.');
     auto parsed = newText.toDouble(&ok);
     if (ok) {
         _text = newText;
@@ -154,14 +159,11 @@ void Number::appendDecimal()
     }
 }
 
-QString Number::text() const { return _text; }
+Operator::Operator(const QString& op) : Element(op) {}
 
-Operator::Operator(const QString& op) : Element(), _op(op) {}
-
-QString Operator::text() const { return _op; }
-
-void EquationQueue::append(int digit)
+void EquationQueue::append(uint8_t digit)
 {
+    assert(digit >=0 && digit <= 9);
     if (empty() || back().completed()) {
         Equation equation;
         equation.append(digit);
@@ -179,6 +181,7 @@ void EquationQueue::appendDicimal()
         emplace_back();
     }
     back().appendDecimal();
+    popFrontIfExceedLimit();
     emit changed();
 }
 
@@ -188,11 +191,10 @@ void EquationQueue::append(const QString& op)
         return;
     if (back().completed()) {
         Equation equation;
-        auto newElement = std::make_shared<Number>();
-        newElement->setValue(static_cast<Number*>(back().elements().back().get())->value());
-        equation.push_back(newElement);
+        equation.push_back(std::make_shared<Number>(static_cast<Number*>(back().back().get())->value()));
         equation.append(op);
         push_back((equation));
+        popFrontIfExceedLimit();
         emit changed();
         return;
     }
@@ -201,11 +203,11 @@ void EquationQueue::append(const QString& op)
     emit changed();
 }
 
-void EquationQueue::popLastCharacter()
+void EquationQueue::tryPopLastCharacter()
 {
     if (empty() || back().completed() || back().empty())
         return;
-    back().pop();
+    back().tryPopCharacter();
     emit changed();
 }
 

@@ -1,16 +1,14 @@
-#include "mainwindow.h"
-
 #include <QApplication>
-#include "calculator.h"
+#include <QIcon>
+#include "main_window.h"
 
 int main(int argc, char* argv[])
 {
     QApplication a(argc, argv);
     QIcon icon;
-    icon.addFile(QString::fromUtf8(":/App/resource/app_icon.png"), QSize(), QIcon::Normal,
-                 QIcon::Off);
+    icon.addFile(QStringLiteral(":/App/resource/app_icon.png"));
     a.setWindowIcon(icon);
-    Calculator calculator;
-    calculator.show();
+    MainWindow mainWindow;
+    mainWindow.show();
     return a.exec();
 }

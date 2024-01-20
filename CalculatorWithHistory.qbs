@@ -10,17 +10,16 @@ QtApplication {
     ]
 
     files: [
-        "calculation.cpp",
-        "calculation.h",
-        "calculator.cpp",
-        "calculator.h",
+        "README.md",
         "display.cpp",
         "display.h",
         "icons.qrc",
         "main.cpp",
-        "mainwindow.cpp",
-        "mainwindow.h",
-        "mainwindow.ui",
+        "main_window.cpp",
+        "main_window.h",
+        "main_window.ui",
+        "math_elements.cpp",
+        "math_elements.h",
         "menu.cpp",
         "menu.h",
         "menu.ui",
@@ -28,4 +27,5 @@ QtApplication {
 
     install: true
     installDir: qbs.targetOS.contains("qnx") ? FileInfo.joinPaths("/tmp", name, "bin") : base
+    consoleApplication: false
 }

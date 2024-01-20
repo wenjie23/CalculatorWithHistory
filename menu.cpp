@@ -3,19 +3,30 @@
 #include <QGraphicsBlurEffect>
 #include <QPainter>
 
+namespace {
+static const QSize g_menuSize(43, 142);
+}
+
 Menu::Menu(QWidget* parent) : QFrame(parent), ui(new Ui::Menu)
 {
     ui->setupUi(this);
-    //    ui->pasteButton->setFixedSize(30, 34);
-    //    ui->connectionSwitch->setFixedSize(30, 34);
-    //    ui->clearButton->setFixedSize(30, 34);
-    setFixedSize(43, 142);
+    setFixedSize(g_menuSize);
 }
 
 Menu::~Menu() { delete ui; }
 
-QAbstractButton* Menu::pasteButton() const { return ui->pasteButton; }
+void Menu::on_clearButton_clicked()
+{
+    emit clearButtonClicked();
+}
 
-QAbstractButton* Menu::connectionButton() const { return ui->connectionSwitch; }
+void Menu::on_connectionSwitch_toggled(bool checked)
+{
+    emit connectionButtonToggled(checked);
+}
 
-QAbstractButton* Menu::clearButton() const { return ui->clearButton; }
+void Menu::on_pasteButton_clicked()
+{
+    emit pasteButtonClicked();
+}
+

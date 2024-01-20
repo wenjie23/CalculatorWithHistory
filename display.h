@@ -13,43 +13,43 @@ class QToolButton;
 
 struct ElementPath : public QPainterPath
 {
-    ElementPath() : QPainterPath() {}
+    ElementPath() = default;
     ElementPath(const QPointF& start, const QPointF& end, const QColor& color);
-    QColor _color;
+    QColor color;
 };
 
 class Display : public QWidget
 {
+    Q_OBJECT
 public:
     explicit Display(QWidget* parent = nullptr);
     ~Display(){};
 
-    void paintEvent(QPaintEvent* event) override;
     void setEquations(const std::shared_ptr<EquationQueue>& equations);
 
+protected:
+    void paintEvent(QPaintEvent* event) override;
+
 private slots:
-    void setUpdateToTrue();
-    void pasteAllResults();
+    void alignElementDisplayContent();
+    void pasteAllResults() const;
     void toggleConnection(bool show);
+    void toggleMenu(bool show);
     void clearAllHistory();
 
 private:
-    std::shared_ptr<EquationQueue> _equations;
-    bool _needUpdateElements = false;
-    std::vector<std::vector<ElementDisplay*>> _elementsDisplay;
+    void adjustElementsDisplayGeo();
+    void updateConnectionForSecondLastLine();
+    void regeneratePaths();
     void drawPaths();
-    static QPainterPath calcPath(const QPointF& start, const QPointF& end);
+    void addPath(ElementDisplay* one, ElementDisplay* other);
+
+    std::shared_ptr<EquationQueue> _equations;
+    std::vector<std::vector<ElementDisplay*>> _elementsDisplay;
     std::vector<ElementPath> _paths;
     QToolButton* _menuButton;
     Menu* _menu;
     QPropertyAnimation* _animation;
-
-    ElementPath generatePath(ElementDisplay* one, ElementDisplay* other);
-
-    void showMenu();
-    void hideMenu();
-
-    bool _showConnections = true;
 };
 
 #endif // DISPLAY_H

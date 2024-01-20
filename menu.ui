@@ -21,7 +21,6 @@
   </property>
   <property name="styleSheet">
    <string notr="true">QFrame#Menu{
-	qproperty-iconSize: 24px;
 	border-width:4px;
 	background-color: rgb(241, 241, 241);
 	border: 1px solid ;
@@ -31,7 +30,7 @@
 	border-left-width: 0px;
 }
 QToolButton{
-	background-color: rgba(0, 0, 0, 0);
+	background-color: rgb(241, 241, 241);
 	border: 1px solid rgb(0, 0, 0, 0);
 	border-radius: 	4px;
 	qproperty-iconSize: 24px
@@ -40,7 +39,7 @@ QToolButton:checked{
 	border: 1px solid rgb(196, 196, 196);
 }
 QToolButton:hover{
-	background-color: rgba(180, 180, 180, 50);
+	background-color: rgb(229, 229, 229);
 }
 QToolButton:hover:checked{
 	border: 1px solid rgb(196, 196, 196);
@@ -92,7 +91,7 @@ QToolButton:pressed{
       </sizepolicy>
      </property>
      <property name="toolTip">
-      <string>Toggle connection between same values.</string>
+      <string>Connect equal values</string>
      </property>
      <property name="text">
       <string>...</string>
@@ -121,7 +120,7 @@ QToolButton:pressed{
       </sizepolicy>
      </property>
      <property name="toolTip">
-      <string>Copy history to clipboard.</string>
+      <string>Copy history to clipboard</string>
      </property>
      <property name="text">
       <string>...</string>
@@ -141,7 +140,7 @@ QToolButton:pressed{
       </sizepolicy>
      </property>
      <property name="toolTip">
-      <string>Clear all history.</string>
+      <string>Clear all history</string>
      </property>
      <property name="text">
       <string>...</string>
