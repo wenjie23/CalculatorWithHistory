@@ -97,8 +97,8 @@ QToolButton:pressed{
       <string>...</string>
      </property>
      <property name="icon">
-      <iconset resource="icons.qrc">
-       <normaloff>:/Button/resource/dash_rect.png</normaloff>:/Button/resource/dash_rect.png</iconset>
+      <iconset resource="../resource/icons.qrc">
+       <normaloff>:/Button/dash_rect.png</normaloff>:/Button/dash_rect.png</iconset>
      </property>
      <property name="checkable">
       <bool>true</bool>
@@ -126,8 +126,8 @@ QToolButton:pressed{
       <string>...</string>
      </property>
      <property name="icon">
-      <iconset resource="icons.qrc">
-       <normaloff>:/Button/resource/paste.png</normaloff>:/Button/resource/paste.png</iconset>
+      <iconset resource="../resource/icons.qrc">
+       <normaloff>:/Button/paste.png</normaloff>:/Button/paste.png</iconset>
      </property>
     </widget>
    </item>
@@ -146,8 +146,8 @@ QToolButton:pressed{
       <string>...</string>
      </property>
      <property name="icon">
-      <iconset resource="icons.qrc">
-       <normaloff>:/Button/resource/red_cross.png</normaloff>:/Button/resource/red_cross.png</iconset>
+      <iconset resource="../resource/icons.qrc">
+       <normaloff>:/Button/red_cross.png</normaloff>:/Button/red_cross.png</iconset>
      </property>
      <property name="checkable">
       <bool>false</bool>
@@ -163,7 +163,7 @@ QToolButton:pressed{
   </layout>
  </widget>
  <resources>
-  <include location="icons.qrc"/>
+  <include location="../resource/icons.qrc"/>
  </resources>
  <connections/>
 </ui>

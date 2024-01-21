@@ -33,7 +33,7 @@ static const double g_connectionLineWidth = 1.6;
 
 static const QSize g_menuButtonSize(34, 30);
 static const QPoint g_menuButtonPos(4, 3);
-static const QString g_menuButtonFileName(":/Button/resource/menu_hamburger.png");
+static const QString g_menuButtonFileName(":/Button/menu_hamburger.png");
 
 } // namespace
 class ElementDisplay : public QLabel

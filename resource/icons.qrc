@@ -1,0 +1,11 @@
+<RCC>
+    <qresource prefix="/Button">
+        <file>dash_rect.png</file>
+        <file>menu_hamburger.png</file>
+        <file>paste.png</file>
+        <file>red_cross.png</file>
+    </qresource>
+    <qresource prefix="/App">
+        <file>app_icon.png</file>
+    </qresource>
+</RCC>
