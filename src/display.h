@@ -38,7 +38,7 @@ private slots:
     void clearAllHistory();
 
 private:
-    void adjustElementsDisplayGeo();
+    void adjustElementsDisplayGeo(bool newLineAdded);
     void updateConnectionForSecondLastLine();
     void regeneratePaths();
     void drawPaths();

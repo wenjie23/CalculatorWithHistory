@@ -21,8 +21,9 @@
 namespace {
 static const int g_bigPointSize = 48;
 static const int g_smallPointSize = 20;
-static const int g_normalHistSizePointSize = 30;
 static const QString g_fontFamily("Arial");
+static const int g_bigFontWidgetHeight = 76;
+static const int g_smallFontWidgetHeight = 36;
 
 static const int g_animationDuration = 300;
 
@@ -30,6 +31,8 @@ static const int g_hChannelUpperBount = 361;
 static const int g_sChannel = 92;
 static const int g_lChannel = 158;
 static const double g_connectionLineWidth = 1.6;
+static const QColor g_displayTextColor(38, 39, 42);
+static const QColor g_historyTextColor(90, 90, 90);
 
 static const QSize g_menuButtonSize(34, 30);
 static const QPoint g_menuButtonPos(4, 3);
@@ -52,7 +55,7 @@ public:
         setFont(font);
 
         QPalette palette = this->palette();
-        palette.setColor(QPalette::WindowText, QColor(38, 39, 42));
+        palette.setColor(QPalette::WindowText, g_displayTextColor);
         setPalette(palette);
     }
 
@@ -176,8 +179,10 @@ void Display::setEquations(const std::shared_ptr<EquationQueue>& equations)
 
 void Display::alignElementDisplayContent()
 {
+    bool newLineAdded = false;
     if (_equations->size() > _elementsDisplay.size()) {
         _elementsDisplay.emplace_back();
+        newLineAdded = true;
     }
     assert(_equations->size() <= _elementsDisplay.size());
     while (_equations->size() < _elementsDisplay.size()) {
@@ -189,7 +194,7 @@ void Display::alignElementDisplayContent()
     }
 
     if (_equations->empty() && _elementsDisplay.empty()){
-        adjustElementsDisplayGeo();
+        adjustElementsDisplayGeo(newLineAdded);
         repaint();
         return;
     }
@@ -202,7 +207,7 @@ void Display::alignElementDisplayContent()
     }
     if (equation.empty()) {
         lineOfDisplay.push_back(new ElementDisplay(this));
-        adjustElementsDisplayGeo();
+        adjustElementsDisplayGeo(newLineAdded);
         repaint();
         return;
     }
@@ -213,11 +218,11 @@ void Display::alignElementDisplayContent()
             lineOfDisplay[i]->setElement(equation[i].get());
         }
     }
-    adjustElementsDisplayGeo();
+    adjustElementsDisplayGeo(newLineAdded);
     update();
 }
 
-void Display::adjustElementsDisplayGeo()
+void Display::adjustElementsDisplayGeo(bool newLineAdded)
 {
     if (_elementsDisplay.empty() || _elementsDisplay.back().empty()){
         _paths.clear();
@@ -226,24 +231,24 @@ void Display::adjustElementsDisplayGeo()
     const int xMargin = 1;
     const int yMargin = 3;
 
-    int lastX = width();
-    int lastY = height();
-
-    for (int line = _elementsDisplay.size() - 1; line >= 0; --line) {
+    {
+        int lastX = width();
+        const int line = _elementsDisplay.size() - 1;
         for (int column = _elementsDisplay[line].size() - 1; column >= 0; --column) {
             auto* display = _elementsDisplay[line][column];
-            if (line < _elementsDisplay.size() - 1 &&
-                display->font().pointSize() > g_normalHistSizePointSize) {
+            if (line == _elementsDisplay.size() - 2) {
                 QFont font = display->font();
-                font.setPointSize(g_normalHistSizePointSize);
+                font.setPointSize(g_smallPointSize);
                 display->setFont(font);
+                QPalette palette = this->palette();
+                palette.setColor(QPalette::WindowText, g_historyTextColor);
+                display->setPalette(palette);
             }
             display->adjustSize();
             display->show();
             lastX -= display->width() + xMargin;
-            display->move(lastX, lastY - display->height());
+            display->move(lastX, height() - display->height());
         }
-
         while (lastX < 0 && line == _elementsDisplay.size() - 1 && !_elementsDisplay[line].empty()) {
             QFont font = _elementsDisplay[line].back()->font();
             font.setPointSize(font.pointSize() - 2);
@@ -256,13 +261,37 @@ void Display::adjustElementsDisplayGeo()
                 display->adjustSize();
                 display->show();
                 lastX -= display->width() + xMargin;
-                display->move(lastX, lastY - display->height());
+                display->move(lastX, height() - display->height());
             }
         }
-        lastX = width();
-        lastY -= _elementsDisplay[line].back()->height() + yMargin;
+    }
+    if (!newLineAdded){
+        updateConnectionForSecondLastLine();
+        regeneratePaths();
+        return;
     }
 
+
+    for (int line = _elementsDisplay.size() - 2; line >= 0; --line) {
+        int lastX = width();
+        for (int column = _elementsDisplay[line].size() - 1; column >= 0; --column) {
+            auto* display = _elementsDisplay[line][column];
+            if (line == _elementsDisplay.size() - 2) {
+                QFont font = display->font();
+                font.setPointSize(g_smallPointSize);
+                display->setFont(font);
+                QPalette palette = this->palette();
+                palette.setColor(QPalette::WindowText, g_historyTextColor);
+                display->setPalette(palette);
+                display->adjustSize();
+                display->show();
+                lastX -= display->width() + xMargin;
+                display->move(lastX, height() - g_bigFontWidgetHeight - g_smallFontWidgetHeight - yMargin);
+            } else {
+                display->move(display->x(), display->y() - g_smallFontWidgetHeight - yMargin);
+            }
+        }
+    }
     updateConnectionForSecondLastLine();
     regeneratePaths();
 }
@@ -285,7 +314,8 @@ void Display::updateConnectionForSecondLastLine()
         for (int latestDisplayIndex = lastLine.size() - 1; latestDisplayIndex >= 0;
              --latestDisplayIndex) {
             auto* lastLineElement = dynamic_cast<Number*>(lastLine[latestDisplayIndex]->element());
-            if (lastLineElement && (*previousLineElement)==(*lastLineElement)) {
+            if (lastLineElement && !lastLine[latestDisplayIndex]->_previous &&
+                (*previousLineElement)==(*lastLineElement)) {
                 displayFromPreviousLine->addNext(lastLine[latestDisplayIndex]);
             }
         }
@@ -313,7 +343,6 @@ void Display::addPath(ElementDisplay* one, ElementDisplay* other)
     if (one->connectColor().spec() != QColor::Invalid) {
         color = one->connectColor();
     } else {
-        auto* random = QRandomGenerator::global();
         color.setHsl(QRandomGenerator::global()->bounded(361), 92, 158);
         one->setConnectColor(color);
     }
