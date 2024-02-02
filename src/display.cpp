@@ -156,13 +156,6 @@ Display::Display(QWidget* parent) : QWidget(parent)
     auto* vLayout = new QVBoxLayout(this);
     vLayout->addStretch(1);
     setLayout(vLayout);
-    // auto* lineLayout = new QHBoxLayout();
-    // lineLayout->addStretch(1);
-    // layout()->addItem(lineLayout);
-    // auto* label = new QLabel("testsetsfeiojoitgjesiojr",this);
-    // lineLayout->addWidget(label);
-    // label = new QLabel("vvvvvvvvvvvvv",this);
-    // lineLayout->addWidget(label);
     adjustSize();
     qDebug() << size();
 
@@ -184,6 +177,22 @@ void Display::alignElementDisplayContent()
     bool newLineAdded = false;
     qDebug() << _equations->size() << layout()->count();
     if (_equations->size() > (layout()->count() - 1)) {
+        auto* lastLineOfLayout = layout()->itemAt(layout()->count() - 1)->layout();
+        if (lastLineOfLayout){
+            for (int i = 0; i < lastLineOfLayout->count(); ++i){
+                auto* display = dynamic_cast<ElementDisplay*>(lastLineOfLayout->itemAt(i)->widget());
+                if (!display)
+                    continue;
+                display->show();
+                QFont font = display->font();
+                font.setPointSize(g_smallPointSize);
+                display->setFont(font);
+                QPalette palette = this->palette();
+                palette.setColor(QPalette::WindowText, g_historyTextColor);
+                display->setPalette(palette);
+            }
+        }
+
         // _elementsDisplay.emplace_back();
         auto* lineLayout = new QHBoxLayout();
         lineLayout->addStretch(1);
@@ -264,6 +273,8 @@ void Display::adjustElementsDisplayGeo(bool newLineAdded)
             display->show();
         }
     }
+    updateConnectionForSecondLastLine();
+    regeneratePaths();
     return;
     if (_elementsDisplay.empty() || _elementsDisplay.back().empty()){
         for (int i = 1; i < layout()->count(); ++i)
@@ -404,39 +415,83 @@ void Display::adjustElementsDisplayGeo(bool newLineAdded)
     // }
 }
 
-// QScrollArea* Display::parentScrollArea() const {
-//     qDebug() << parentWidget();
-//     return static_cast<QScrollArea*>(parentWidget()); }
-
 void Display::updateConnectionForSecondLastLine()
 {
-    const int displayLineCount = _elementsDisplay.size();
+
+    const int displayLineCount = layout()->count() - 1;
     if (displayLineCount < 2)
         return;
-    auto& secondLastLine = _elementsDisplay[displayLineCount - 2];
-    for (int column = secondLastLine.size() - 1; column >= 0; --column) {
-        secondLastLine[column]->clearAllNext();
+    auto* secondLastLine = layout()->itemAt(displayLineCount - 1)->layout();
+    for (int column = 0; column < secondLastLine->count(); ++column){
+        auto* display = dynamic_cast<ElementDisplay*>(secondLastLine->itemAt(column)->widget());
+        if (!display)
+            continue;
+        display->clearAllNext();
     }
-    auto& lastLine = _elementsDisplay.back();
-    for (int column = secondLastLine.size() - 1; column >= 0; --column) {
-        auto* const displayFromPreviousLine = secondLastLine[column];
+
+    auto* lastLine = layout()->itemAt(displayLineCount)->layout();
+    for (int column = secondLastLine->count() - 1; column >= 0; --column){
+        auto* const displayFromPreviousLine = dynamic_cast<ElementDisplay*>(
+            secondLastLine->itemAt(column)->widget());
+        if (!displayFromPreviousLine)
+            continue;
         auto* const previousLineElement = dynamic_cast<Number*>(displayFromPreviousLine->element());
         if (!previousLineElement)
             continue;
-        for (int latestDisplayIndex = lastLine.size() - 1; latestDisplayIndex >= 0;
+        for (int latestDisplayIndex = lastLine->count() - 1; latestDisplayIndex >= 0;
              --latestDisplayIndex) {
-            auto* lastLineElement = dynamic_cast<Number*>(lastLine[latestDisplayIndex]->element());
-            if (lastLineElement && !lastLine[latestDisplayIndex]->_previous &&
+            auto* lastLineDisplay = dynamic_cast<ElementDisplay*>(lastLine->itemAt(latestDisplayIndex)->widget());
+            if (!lastLineDisplay)
+                continue;
+            auto* lastLineElement = dynamic_cast<Number*>(lastLineDisplay->element());
+
+            if (lastLineElement && !lastLineDisplay->_previous &&
                 (*previousLineElement)==(*lastLineElement)) {
-                displayFromPreviousLine->addNext(lastLine[latestDisplayIndex]);
+                displayFromPreviousLine->addNext(lastLineDisplay);
             }
         }
     }
+
+    // for (int column = secondLastLine.size() - 1; column >= 0; --column) {
+    //      secondLastLine[column]->clearAllNext();
+    // }
+    // auto& lastLine = _elementsDisplay.back();
+    // for (int column = secondLastLine.size() - 1; column >= 0; --column) {
+    //     auto* const displayFromPreviousLine = secondLastLine[column];
+    //     auto* const previousLineElement = dynamic_cast<Number*>(displayFromPreviousLine->element());
+    //     if (!previousLineElement)
+    //         continue;
+    //     for (int latestDisplayIndex = lastLine.size() - 1; latestDisplayIndex >= 0;
+    //          --latestDisplayIndex) {
+    //         auto* lastLineElement = dynamic_cast<Number*>(lastLine[latestDisplayIndex]->element());
+    //         if (lastLineElement && !lastLine[latestDisplayIndex]->_previous &&
+    //             (*previousLineElement)==(*lastLineElement)) {
+    //             displayFromPreviousLine->addNext(lastLine[latestDisplayIndex]);
+    //         }
+    //     }
+    // }
 }
 
 void Display::regeneratePaths()
 {
     _paths.clear();
+    for (int r = 0; r < layout()->count(); ++r){
+        auto* line = layout()->itemAt(r)->layout();
+        if (!line)
+            continue;
+        for (int c = 0; c < line->count(); ++c){
+            auto* display = dynamic_cast<ElementDisplay*>(line->itemAt(c)->widget());
+            if (!display)
+                continue;
+            for (const auto& next : display->nexts()) {
+                if (!next)
+                    continue;
+                addPath(display, next);
+            }
+        }
+    }
+
+
     for (int r = 0; r < _elementsDisplay.size(); ++r) {
         for (int c = 0; c < _elementsDisplay[r].size(); ++c) {
             auto* const display = _elementsDisplay[r][c];
