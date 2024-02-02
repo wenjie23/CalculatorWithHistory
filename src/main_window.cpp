@@ -46,7 +46,8 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->period, &QPushButton::clicked, this, &MainWindow::periodClicked);
 
     _equationQueue = std::make_shared<EquationQueue>();
-    ui->display->setEquations(_equationQueue);
+    static_cast<Display*>(ui->display->widget())->setEquations(_equationQueue);
+    // ui->display->scrollArea = ui->displayArea;
 
     setWindowTitle("CalculatorWithHistory");
     setFixedSize(g_windowSize);

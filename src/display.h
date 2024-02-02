@@ -4,6 +4,7 @@
 #include <QLabel>
 #include <QPainter>
 #include <QPainterPath>
+#include <QScrollArea>
 
 class EquationQueue;
 class ElementDisplay;
@@ -18,6 +19,22 @@ struct ElementPath : public QPainterPath
     QColor color;
 };
 
+class ScrollDisplay : public QScrollArea
+{
+    Q_OBJECT
+public:
+    explicit ScrollDisplay(QWidget* parent = nullptr);
+    ~ScrollDisplay(){};
+
+private slots:
+    void toggleMenu(bool show);
+private:
+
+    QPropertyAnimation* _animation;
+    Menu* _menu;
+    QToolButton* _menuButton;
+};
+
 class Display : public QWidget
 {
     Q_OBJECT
@@ -26,16 +43,19 @@ public:
     ~Display(){};
 
     void setEquations(const std::shared_ptr<EquationQueue>& equations);
+    QScrollArea* scrollArea;
 
-protected:
-    void paintEvent(QPaintEvent* event) override;
-
-private slots:
+public slots:
     void alignElementDisplayContent();
     void pasteAllResults() const;
     void toggleConnection(bool show);
-    void toggleMenu(bool show);
     void clearAllHistory();
+
+protected:
+    void paintEvent(QPaintEvent* event) override;
+    QSize sizeHint() const override {
+        return childrenRect().size();
+    }
 
 private:
     void adjustElementsDisplayGeo(bool newLineAdded);
@@ -47,9 +67,6 @@ private:
     std::shared_ptr<EquationQueue> _equations;
     std::vector<std::vector<ElementDisplay*>> _elementsDisplay;
     std::vector<ElementPath> _paths;
-    QToolButton* _menuButton;
-    Menu* _menu;
-    QPropertyAnimation* _animation;
 };
 
 #endif // DISPLAY_H

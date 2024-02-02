@@ -13,6 +13,10 @@
 #include <QToolButton>
 #include <QStringBuilder>
 #include <QPalette>
+#include <QScrollArea>
+#include <QScrollBar>
+#include <QVBoxLayout>
+#include <QHBoxLayout>
 
 #include "display.h"
 #include "math_elements.h"
@@ -49,7 +53,7 @@ public:
         setElement(element);
         setMargin(2);
 
-        setAlignment(Qt::AlignLeft | Qt::AlignBottom);
+        setAlignment(Qt::AlignLeft | Qt::AlignCenter);
         QFont font(g_fontFamily, g_bigPointSize);
         font.setStyleStrategy(QFont::PreferAntialias);
         setFont(font);
@@ -71,6 +75,10 @@ public:
             painter.drawRoundedRect(rect().adjusted(1, 1, -2, -2), 2, 2);
         }
     }
+    // virtual QSize sizeHint() const override
+    // {
+    //     return size();
+    // }
 
     Element* element() const { return _element; }
     void setElement(Element* e)
@@ -144,26 +152,20 @@ ElementPath::ElementPath(const QPointF& start, const QPointF& end, const QColor&
 
 Display::Display(QWidget* parent) : QWidget(parent)
 {
-    _menu = new Menu(this);
-    connect(_menu, &Menu::pasteButtonClicked, this, &Display::pasteAllResults);
-    connect(_menu, &Menu::connectionButtonToggled, this, &Display::toggleConnection);
-    connect(_menu, &Menu::clearButtonClicked, this, &Display::clearAllHistory);
 
-    _animation = new QPropertyAnimation(_menu, "pos", this);
-    _animation->setDuration(g_animationDuration);
-    _animation->setEasingCurve(QEasingCurve::InOutQuad);
+    auto* vLayout = new QVBoxLayout(this);
+    vLayout->addStretch(1);
+    setLayout(vLayout);
+    // auto* lineLayout = new QHBoxLayout();
+    // lineLayout->addStretch(1);
+    // layout()->addItem(lineLayout);
+    // auto* label = new QLabel("testsetsfeiojoitgjesiojr",this);
+    // lineLayout->addWidget(label);
+    // label = new QLabel("vvvvvvvvvvvvv",this);
+    // lineLayout->addWidget(label);
+    adjustSize();
+    qDebug() << size();
 
-    _menuButton = new QToolButton(this);
-    _menuButton->setIcon(QIcon(g_menuButtonFileName));
-    _menuButton->setStyleSheet(_menu->styleSheet());
-    _menuButton->setFixedSize(g_menuButtonSize);
-    _menuButton->move(g_menuButtonPos);
-    _menuButton->setCheckable(true);
-    connect(_menuButton, &QPushButton::toggled, this, &Display::toggleMenu);
-
-    toggleMenu(false);
-    _menu->raise();
-    _menuButton->raise();
 }
 
 void Display::setEquations(const std::shared_ptr<EquationQueue>& equations)
@@ -180,42 +182,68 @@ void Display::setEquations(const std::shared_ptr<EquationQueue>& equations)
 void Display::alignElementDisplayContent()
 {
     bool newLineAdded = false;
-    if (_equations->size() > _elementsDisplay.size()) {
-        _elementsDisplay.emplace_back();
+    qDebug() << _equations->size() << layout()->count();
+    if (_equations->size() > (layout()->count() - 1)) {
+        // _elementsDisplay.emplace_back();
+        auto* lineLayout = new QHBoxLayout();
+        lineLayout->addStretch(1);
+        layout()->addItem(lineLayout);
         newLineAdded = true;
     }
-    assert(_equations->size() <= _elementsDisplay.size());
-    while (_equations->size() < _elementsDisplay.size()) {
-        while (!_elementsDisplay.back().empty()) {
-            delete _elementsDisplay.back().back();
-            _elementsDisplay.back().pop_back();
+    // assert(_equations->size() <= _elementsDisplay.size());
+    while (_equations->size() < (layout()->count() - 1)) {
+        // auto& lastLineOfDisplay = _elementsDisplay.back();
+        auto* lastLineLayout = layout()->itemAt(layout()->count() - 1)->layout();
+        while (lastLineLayout->count() > 1) {
+            // delete lastLineOfDisplay.back();
+            // lastLineOfDisplay.pop_back();
+
+            auto* display = lastLineLayout->takeAt(lastLineLayout->count() - 1);
+            delete display;
         }
-        _elementsDisplay.pop_back();
+        // _elementsDisplay.pop_back();
     }
 
-    if (_equations->empty() && _elementsDisplay.empty()){
+    if (_equations->empty() && layout()->count() == 1){
         adjustElementsDisplayGeo(newLineAdded);
         repaint();
         return;
     }
 
     const auto& equation = _equations->back();
-    auto& lineOfDisplay = _elementsDisplay.back();
-    while (equation.size() < lineOfDisplay.size()) {
-        delete lineOfDisplay.back();
-        lineOfDisplay.pop_back();
+    // auto& lineOfDisplay = _elementsDisplay.back();
+    auto* lastLineLayout = static_cast<QHBoxLayout*>(layout()->itemAt(layout()->count() - 1)->layout());
+    qDebug() << "sdf" << equation.size() << lastLineLayout->count();
+    while (equation.size() < lastLineLayout->count() - 1) {
+        auto* display = lastLineLayout->takeAt(lastLineLayout->count() - 1);
+        delete display;
+        // delete lineOfDisplay.back();
+        // lineOfDisplay.pop_back();
     }
     if (equation.empty()) {
-        lineOfDisplay.push_back(new ElementDisplay(this));
+        lastLineLayout->insertWidget(-1, new ElementDisplay(this));
+        // lineOfDisplay.push_back(new ElementDisplay(this));
         adjustElementsDisplayGeo(newLineAdded);
         repaint();
         return;
     }
     for (int i = std::max(int(equation.size()) - 2, 0); i < equation.size(); ++i) {
-        if (i >= lineOfDisplay.size()) {
-            lineOfDisplay.push_back(new ElementDisplay(this, equation[i].get()));
+        // if (i >= lineOfDisplay.size()) {
+        //     lineOfDisplay.push_back(new ElementDisplay(this, equation[i].get()));
+
+        // } else {
+        //     lineOfDisplay[i]->setElement(equation[i].get());
+        // }
+
+        if (i >= lastLineLayout->count() - 1)
+        {
+            auto* display = new ElementDisplay(this, equation[i].get());
+            // display->show();
+            lastLineLayout->addWidget(display);
+            // qDebug() << lastLineLayout->itemAt(1)->widget()
         } else {
-            lineOfDisplay[i]->setElement(equation[i].get());
+            static_cast<ElementDisplay*>(
+                lastLineLayout->itemAt(lastLineLayout->count() - 1)->widget())->setElement(equation[i].get());
         }
     }
     adjustElementsDisplayGeo(newLineAdded);
@@ -224,16 +252,60 @@ void Display::alignElementDisplayContent()
 
 void Display::adjustElementsDisplayGeo(bool newLineAdded)
 {
+    for (int i = 0; i < layout()->count(); ++i)
+    {
+        auto* line = layout()->itemAt(i)->layout();
+        if (!line)
+            continue;
+        for (int c = 0; c < line->count(); ++c){
+            auto* display = dynamic_cast<ElementDisplay*>(line->itemAt(c)->widget());
+            if (!display)
+                continue;
+            display->show();
+        }
+    }
+    return;
     if (_elementsDisplay.empty() || _elementsDisplay.back().empty()){
+        for (int i = 1; i < layout()->count(); ++i)
+        {
+            // layout()->remo
+        }
         _paths.clear();
         return;
     }
+    {
+        const int line = _elementsDisplay.size() - 1;
+        auto* lineLayout = new QHBoxLayout();
+        layout()->addItem(lineLayout);
+        lineLayout->addStretch(1);
+        for (int column = 0; column < _elementsDisplay[line].size(); ++column) {
+            qDebug() << "here" << size();
+
+            auto* display = _elementsDisplay[line][column];
+            if (line == _elementsDisplay.size() - 2) {
+                QFont font = display->font();
+                font.setPointSize(g_smallPointSize);
+                display->setFont(font);
+                QPalette palette = this->palette();
+                palette.setColor(QPalette::WindowText, g_historyTextColor);
+                display->setPalette(palette);
+            }
+            display->adjustSize();
+            display->show();
+            qDebug() << display->text();
+            lineLayout->insertWidget(-1, display);
+        }
+        return;
+    }
+
     const int xMargin = 1;
     const int yMargin = 3;
 
+    int minX = 0;
+    int minY = 0;
     {
-        int lastX = width();
         const int line = _elementsDisplay.size() - 1;
+        int lastX = width();
         for (int column = _elementsDisplay[line].size() - 1; column >= 0; --column) {
             auto* display = _elementsDisplay[line][column];
             if (line == _elementsDisplay.size() - 2) {
@@ -249,6 +321,7 @@ void Display::adjustElementsDisplayGeo(bool newLineAdded)
             lastX -= display->width() + xMargin;
             display->move(lastX, height() - display->height());
         }
+
         while (lastX < 0 && line == _elementsDisplay.size() - 1 && !_elementsDisplay[line].empty()) {
             QFont font = _elementsDisplay[line].back()->font();
             font.setPointSize(font.pointSize() - 2);
@@ -264,10 +337,29 @@ void Display::adjustElementsDisplayGeo(bool newLineAdded)
                 display->move(lastX, height() - display->height());
             }
         }
+        minX = std::min(minX, lastX);
     }
     if (!newLineAdded){
-        updateConnectionForSecondLastLine();
-        regeneratePaths();
+
+        if (minX < 0){
+            // qDebug() << minX;
+            // resize(width() - minX, height());
+            // qDebug() << size();
+            qDebug() << "~~" << size() << childrenRect() << sizeHint();
+            adjustSize();
+            // resize(childrenRect().size());
+            qDebug() << size();
+            updateConnectionForSecondLastLine();
+            regeneratePaths();
+            // qDebug() << parentScrollArea();
+            // if (scrollArea->horizontalScrollBar()){
+
+            //     scrollArea->horizontalScrollBar()->setValue(scrollArea->horizontalScrollBar()->maximum());
+            //     scrollArea->verticalScrollBar()->setValue(scrollArea->verticalScrollBar()->maximum());
+
+            // }
+}
+
         return;
     }
 
@@ -291,10 +383,30 @@ void Display::adjustElementsDisplayGeo(bool newLineAdded)
                 display->move(display->x(), display->y() - g_smallFontWidgetHeight - yMargin);
             }
         }
+        minX = std::min(minX, lastX);
+    }
+    if (minX < 0){
+        qDebug() << minX;
+        // resize(width() - minX, height());
+        qDebug() << "~~" << size();
+        adjustSize();
+        qDebug() << size();
+
     }
     updateConnectionForSecondLastLine();
     regeneratePaths();
+
+    // if (scrollArea->horizontalScrollBar()){
+
+    //     scrollArea->horizontalScrollBar()->setValue(scrollArea->horizontalScrollBar()->maximum());
+    //     scrollArea->verticalScrollBar()->setValue(scrollArea->verticalScrollBar()->maximum());
+
+    // }
 }
+
+// QScrollArea* Display::parentScrollArea() const {
+//     qDebug() << parentWidget();
+//     return static_cast<QScrollArea*>(parentWidget()); }
 
 void Display::updateConnectionForSecondLastLine()
 {
@@ -355,8 +467,8 @@ void Display::paintEvent(QPaintEvent* event)
 {
     if (ElementDisplay::showConnections)
         drawPaths();
-    _menu->raise();
-    _menuButton->raise();
+    // _menu->raise();
+    // _menuButton->raise();
     QWidget::paintEvent(event);
 }
 
@@ -370,14 +482,6 @@ void Display::drawPaths()
         painter.setPen(pen);
         painter.drawPath(path);
     }
-}
-
-void Display::toggleMenu(bool show)
-{
-    _animation->setStartValue(_menu->pos());
-    _animation->setEndValue(QPoint(show ? 0 : -_menu->width(), _menu->y()));
-    _animation->start();
-    repaint(_menu->geometry());
 }
 
 void Display::pasteAllResults() const
@@ -405,4 +509,40 @@ void Display::clearAllHistory()
 {
     _equations->clear();
     emit _equations->changed();
+}
+
+ScrollDisplay::ScrollDisplay(QWidget *parent): QScrollArea(parent)
+{
+    auto* display = new Display(this);
+    setWidget(display);
+    setWidgetResizable(true);
+    setAlignment(Qt::AlignLeft | Qt::AlignBottom);
+    _menu = new Menu(this);
+    connect(_menu, &Menu::pasteButtonClicked, display, &Display::pasteAllResults);
+    connect(_menu, &Menu::connectionButtonToggled, display, &Display::toggleConnection);
+    connect(_menu, &Menu::clearButtonClicked, display, &Display::clearAllHistory);
+
+    _animation = new QPropertyAnimation(_menu, "pos", this);
+    _animation->setDuration(g_animationDuration);
+    _animation->setEasingCurve(QEasingCurve::InOutQuad);
+
+    _menuButton = new QToolButton(this);
+    _menuButton->setIcon(QIcon(g_menuButtonFileName));
+    _menuButton->setStyleSheet(_menu->styleSheet());
+    _menuButton->setFixedSize(g_menuButtonSize);
+    _menuButton->move(g_menuButtonPos);
+    _menuButton->setCheckable(true);
+    connect(_menuButton, &QPushButton::toggled, this, &ScrollDisplay::toggleMenu);
+
+    toggleMenu(false);
+    _menu->raise();
+    _menuButton->raise();
+}
+
+void ScrollDisplay::toggleMenu(bool show)
+{
+    _animation->setStartValue(_menu->pos());
+    _animation->setEndValue(QPoint(show ? 0 : -_menu->width(), _menu->y()));
+    _animation->start();
+    repaint(_menu->geometry());
 }

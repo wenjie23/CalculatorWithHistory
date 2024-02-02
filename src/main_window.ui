@@ -51,7 +51,7 @@ QPushButton:pressed{
     <number>2</number>
    </property>
    <item>
-    <widget class="Display" name="display" native="true"/>
+    <widget class="ScrollDisplay" name="display" native="true"/>
    </item>
    <item>
     <widget class="QWidget" name="widget_2" native="true">
@@ -499,7 +499,7 @@ QPushButton:pressed{
  </widget>
  <customwidgets>
   <customwidget>
-   <class>Display</class>
+   <class>ScrollDisplay</class>
    <extends>QWidget</extends>
    <header>display.h</header>
    <container>1</container>
