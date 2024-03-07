@@ -20,7 +20,6 @@
 #include <QKeyEvent>
 
 #include "display.h"
-#include "math_elements.h"
 #include "menu.h"
 
 namespace {
@@ -44,111 +43,45 @@ static const QPoint g_menuButtonPos(4, 3);
 static const QString g_menuButtonFileName(":/Button/menu_hamburger.png");
 
 } // namespace
-class ElementDisplay : public QLabel
+
+
+ElementPath::ElementPath(ElementDisplay* start, ElementDisplay* end, const QColor &color, QObject* parent):
+    QObject(parent), start(start), end(end), color(color)
 {
-    friend Display;
-public:
-    ElementDisplay(QWidget* parent) : ElementDisplay(parent, nullptr) {}
-    ElementDisplay(QWidget* parent, Element* element, bool showConnection = true) : QLabel(parent)
-    {
-        setElement(element);
-        setMargin(2);
+    update();
+}
 
-        setAlignment(Qt::AlignLeft | Qt::AlignCenter);
-        QFont font(g_fontFamily, g_bigPointSize);
-        font.setStyleStrategy(QFont::PreferAntialias);
-        setFont(font);
-
-        QPalette palette = this->palette();
-        palette.setColor(QPalette::WindowText, g_displayTextColor);
-        setPalette(palette);
-    }
-
-    void paintEvent(QPaintEvent* event) override
-    {
-        QLabel::paintEvent(event);
-        if (showConnections && (!_nexts.empty() || _previous )) {
-            QPainter painter(this);
-            QPen pen(_connectColor.spec() == QColor::Invalid ? Qt::gray : _connectColor, g_connectionLineWidth);
-            pen.setStyle(Qt::DashLine);
-            painter.setPen(pen);
-            painter.setRenderHint(QPainter::Antialiasing);
-            painter.drawRoundedRect(rect().adjusted(1, 1, -2, -2), 2, 2);
-        }
-    }
-    // virtual QSize sizeHint() const override
-    // {
-    //     return size();
-    // }
-
-    Element* element() const { return _element; }
-    void setElement(Element* e)
-    {
-        if (_element == e)
-            return;
-        disconnect(e, &Element::changed, this, &ElementDisplay::updateElementText);
-        connect(e, &Element::changed, this, &ElementDisplay::updateElementText);
-        _element = e;
-        updateElementText();
-    }
-    QColor connectColor() const { return _connectColor; }
-    void setConnectColor(const QColor color) { _connectColor = color; }
-
-    const std::vector<QPointer<ElementDisplay>>& nexts() { return _nexts; };
-    void addNext(ElementDisplay* display)
-    {
-        if (!display)
-            return;
-        _nexts.push_back(display);
-        display->_previous = this;
-    }
-    void clearAllNext()
-    {
-        while (!_nexts.empty()) {
-            if (_nexts.back())
-                _nexts.back()->_previous = nullptr;
-            _nexts.pop_back();
-        }
-    }
-
-private slots:
-    void updateElementText()
-    {
-        if (!_element) {
-            setText("");
-        }
-        auto textToShow = _element->text();
-        if (text() == textToShow)
-            return;
-        if (textToShow.size() > 1 && textToShow[0] == QChar('-'))
-            textToShow = QStringLiteral("(") % textToShow % QStringLiteral(")");
-        setText(textToShow);
-    }
-
-private:
-    QPointer<Element> _element;
-    std::vector<QPointer<ElementDisplay>> _nexts;
-    QPointer<ElementDisplay> _previous;
-    QColor _connectColor;
-    static bool showConnections;
-};
-bool ElementDisplay::showConnections = true;
-
-ElementPath::ElementPath(const QPointF& start, const QPointF& end, const QColor& color)
-    : color(color)
+QPointF ElementPath::startPoint() const
 {
-    moveTo(start);
-    const double dx = end.x() - start.x();
-    const double dy = end.y() - start.y();
+    if (!start)
+        return {};
+    return QPointF(start->pos()) + QPointF(start->width() / 2, start->height());
+}
+
+QPointF ElementPath::endPoint() const
+{
+    if (!end)
+        return {};
+    return end->pos() + QPointF(end->width() / 2, 0);
+}
+
+void ElementPath::update()
+{
+    clear();
+    const QPointF startP = startPoint();
+    const QPointF endP = endPoint();
+    moveTo(startP);
+    const double dx = endP.x() - startP.x();
+    const double dy = endP.y() - startP.y();
     const double dist = qSqrt(dx * dx + dy * dy);
     const double angle = qAtan2(dy, dx);
     const double offsetX = dist * 0.15 * qCos(angle + (dx > 0 ? M_PI / 8 : -M_PI / 8));
     const double offsetY = dist * 0.15 * qSin(angle + (dx > 0 ? M_PI / 8 : -M_PI / 8));
 
-    const QPointF c1(start.x() + offsetX, start.y() + offsetY);
-    const QPointF c2(end.x() - offsetX, end.y() - offsetY);
+    const QPointF c1(startP.x() + offsetX, startP.y() + offsetY);
+    const QPointF c2(endP.x() - offsetX, endP.y() - offsetY);
 
-    cubicTo(c1, c2, end);
+    cubicTo(c1, c2, endP);
 }
 
 Display::Display(QWidget* parent) : QWidget(parent)
@@ -158,7 +91,6 @@ Display::Display(QWidget* parent) : QWidget(parent)
     vLayout->addStretch(1);
     setLayout(vLayout);
     adjustSize();
-    qDebug() << size();
 
 }
 
@@ -176,7 +108,6 @@ void Display::setEquations(const std::shared_ptr<EquationQueue>& equations)
 void Display::alignElementDisplayContent()
 {
     bool newLineAdded = false;
-    qDebug() << _equations->size() << layout()->count();
     if (_equations->size() > (layout()->count() - 1)) {
         auto* lastLineOfLayout = layout()->itemAt(layout()->count() - 1)->layout();
         if (lastLineOfLayout){
@@ -223,7 +154,6 @@ void Display::alignElementDisplayContent()
     const auto& equation = _equations->back();
     // auto& lineOfDisplay = _elementsDisplay.back();
     auto* lastLineLayout = static_cast<QHBoxLayout*>(layout()->itemAt(layout()->count() - 1)->layout());
-    qDebug() << "sdf" << equation.size() << lastLineLayout->count();
     while (equation.size() < lastLineLayout->count() - 1) {
         auto* display = lastLineLayout->takeAt(lastLineLayout->count() - 1);
         delete display;
@@ -363,13 +293,6 @@ void Display::adjustElementsDisplayGeo(bool newLineAdded)
             qDebug() << size();
             updateConnectionForSecondLastLine();
             regeneratePaths();
-            // qDebug() << parentScrollArea();
-            // if (scrollArea->horizontalScrollBar()){
-
-            //     scrollArea->horizontalScrollBar()->setValue(scrollArea->horizontalScrollBar()->maximum());
-            //     scrollArea->verticalScrollBar()->setValue(scrollArea->verticalScrollBar()->maximum());
-
-            // }
 }
 
         return;
@@ -408,12 +331,6 @@ void Display::adjustElementsDisplayGeo(bool newLineAdded)
     updateConnectionForSecondLastLine();
     regeneratePaths();
 
-    // if (scrollArea->horizontalScrollBar()){
-
-    //     scrollArea->horizontalScrollBar()->setValue(scrollArea->horizontalScrollBar()->maximum());
-    //     scrollArea->verticalScrollBar()->setValue(scrollArea->verticalScrollBar()->maximum());
-
-    // }
 }
 
 void Display::updateConnectionForSecondLastLine()
@@ -515,28 +432,34 @@ void Display::addPath(ElementDisplay* one, ElementDisplay* other)
         one->setConnectColor(color);
     }
     other->setConnectColor(color);
-    _paths.emplace_back(QPointF(one->pos()) + QPointF(one->width() / 2, one->height()),
-                        other->pos() + QPointF(one->width() / 2, 0), color);
+    _paths.emplace_back(new ElementPath(one, other, color, this));
 }
 
 void Display::paintEvent(QPaintEvent* event)
 {
     if (ElementDisplay::showConnections)
         drawPaths();
-    // _menu->raise();
-    // _menuButton->raise();
     QWidget::paintEvent(event);
+}
+
+void Display::resizeEvent(QResizeEvent *event)
+{
+    for (auto* path : _paths) {
+        path->update();
+    }
+    QWidget::resizeEvent(event);
+
 }
 
 void Display::drawPaths()
 {
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
-    for (const auto& path : _paths) {
-        QPen pen(path.color, g_connectionLineWidth);
+    for (auto* path : _paths) {
+        QPen pen(path->color, g_connectionLineWidth);
         pen.setStyle(Qt::DashLine);
         painter.setPen(pen);
-        painter.drawPath(path);
+        painter.drawPath(*path);
     }
 }
 
@@ -601,6 +524,7 @@ ScrollDisplay::ScrollDisplay(QWidget *parent): QScrollArea(parent)
     _menu->raise();
     _menuButton->raise();
 }
+bool ElementDisplay::showConnections = true;
 
 void ScrollDisplay::wheelEvent(QWheelEvent *event)
 {
@@ -632,4 +556,76 @@ void ScrollDisplay::toggleMenu(bool show)
     _animation->setEndValue(QPoint(show ? 0 : -_menu->width(), _menu->y()));
     _animation->start();
     repaint(_menu->geometry());
+}
+
+#include "moc_display.cpp"
+
+ElementDisplay::ElementDisplay(QWidget *parent, Element *element, bool showConnection) : QLabel(parent)
+{
+    setElement(element);
+    setMargin(2);
+
+    setAlignment(Qt::AlignLeft | Qt::AlignCenter);
+    QFont font(g_fontFamily, g_bigPointSize);
+    font.setStyleStrategy(QFont::PreferAntialias);
+    setFont(font);
+
+    QPalette palette = this->palette();
+    palette.setColor(QPalette::WindowText, g_displayTextColor);
+    setPalette(palette);
+}
+
+void ElementDisplay::paintEvent(QPaintEvent *event)
+{
+    QLabel::paintEvent(event);
+    if (showConnections && (!_nexts.empty() || _previous )) {
+        QPainter painter(this);
+        QPen pen(_connectColor.spec() == QColor::Invalid ? Qt::gray : _connectColor, g_connectionLineWidth);
+        pen.setStyle(Qt::DashLine);
+        painter.setPen(pen);
+        painter.setRenderHint(QPainter::Antialiasing);
+        painter.drawRoundedRect(rect().adjusted(1, 1, -2, -2), 2, 2);
+    }
+}
+
+Element *ElementDisplay::element() const { return _element; }
+
+void ElementDisplay::setElement(Element *e)
+{
+    if (_element == e)
+        return;
+    disconnect(e, &Element::changed, this, &ElementDisplay::updateElementText);
+    connect(e, &Element::changed, this, &ElementDisplay::updateElementText);
+    _element = e;
+    updateElementText();
+}
+
+void ElementDisplay::addNext(ElementDisplay *display)
+{
+    if (!display)
+        return;
+    _nexts.push_back(display);
+    display->_previous = this;
+}
+
+void ElementDisplay::clearAllNext()
+{
+    while (!_nexts.empty()) {
+        if (_nexts.back())
+            _nexts.back()->_previous = nullptr;
+        _nexts.pop_back();
+    }
+}
+
+void ElementDisplay::updateElementText()
+{
+    if (!_element) {
+        setText("");
+    }
+    auto textToShow = _element->text();
+    if (text() == textToShow)
+        return;
+    if (textToShow.size() > 1 && textToShow[0] == QChar('-'))
+        textToShow = QStringLiteral("(") % textToShow % QStringLiteral(")");
+    setText(textToShow);
 }
