@@ -17,6 +17,7 @@
 #include <QScrollBar>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
+#include <QKeyEvent>
 
 #include "display.h"
 #include "math_elements.h"
@@ -572,6 +573,13 @@ ScrollDisplay::ScrollDisplay(QWidget *parent): QScrollArea(parent)
     setWidget(display);
     setWidgetResizable(true);
     setAlignment(Qt::AlignLeft | Qt::AlignBottom);
+
+
+    setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    connect(horizontalScrollBar(), &QScrollBar::rangeChanged, this, &ScrollDisplay::onHorizontalRangeChanged);
+    connect(verticalScrollBar(), &QScrollBar::rangeChanged, this, &ScrollDisplay::onVerticalRangeChanged);
+
     _menu = new Menu(this);
     connect(_menu, &Menu::pasteButtonClicked, display, &Display::pasteAllResults);
     connect(_menu, &Menu::connectionButtonToggled, display, &Display::toggleConnection);
@@ -592,6 +600,30 @@ ScrollDisplay::ScrollDisplay(QWidget *parent): QScrollArea(parent)
     toggleMenu(false);
     _menu->raise();
     _menuButton->raise();
+}
+
+void ScrollDisplay::wheelEvent(QWheelEvent *event)
+{
+    if (event->modifiers() == Qt::ShiftModifier) // If shift key is pressed
+    {
+        QWheelEvent horizontalEvent(event->position(), event->globalPosition(), event->pixelDelta(), event->angleDelta().transposed(),
+                                    event->buttons(), event->modifiers(), event->phase(), true);
+        QScrollArea::wheelEvent(&horizontalEvent);
+    }
+    else
+    {
+        QScrollArea::wheelEvent(event);
+    }
+}
+
+void ScrollDisplay::onHorizontalRangeChanged(int min, int max)
+{
+    horizontalScrollBar()->setValue(max);
+}
+
+void ScrollDisplay::onVerticalRangeChanged(int min, int max)
+{
+    verticalScrollBar()->setValue(max);
 }
 
 void ScrollDisplay::toggleMenu(bool show)

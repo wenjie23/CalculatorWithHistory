@@ -26,8 +26,14 @@ public:
     explicit ScrollDisplay(QWidget* parent = nullptr);
     ~ScrollDisplay(){};
 
+protected:
+    void wheelEvent(QWheelEvent *event) override;
+
 private slots:
     void toggleMenu(bool show);
+    void onHorizontalRangeChanged(int min, int max);
+    void onVerticalRangeChanged(int min, int max);
+
 private:
 
     QPropertyAnimation* _animation;
