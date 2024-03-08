@@ -37,6 +37,7 @@ public:
     ~ScrollDisplay(){};
 
 protected:
+    void paintEvent(QPaintEvent* event) override;
     void wheelEvent(QWheelEvent *event) override;
 
 private slots:
@@ -82,7 +83,6 @@ private:
     void addPath(ElementDisplay* one, ElementDisplay* other);
 
     std::shared_ptr<EquationQueue> _equations;
-    std::vector<std::vector<ElementDisplay*>> _elementsDisplay;
     std::vector<ElementPath*> _paths;
 };
 
@@ -104,9 +104,6 @@ public:
     const std::vector<QPointer<ElementDisplay>>& nexts() { return _nexts; };
     void addNext(ElementDisplay* display);
     void clearAllNext();
-
-signals:
-    void geoChanged(const QRect& size);
 
 private slots:
     void updateElementText();
