@@ -77,6 +77,7 @@ protected:
 
 private:
     void adjustElementsDisplayGeo(bool newLineAdded);
+    void adjustLastLineFontSize();
     void updateConnectionForSecondLastLine();
     void regeneratePaths();
     void drawPaths();

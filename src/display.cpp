@@ -58,6 +58,32 @@ QLayoutItem* takeLastItemInLayout(QLayout* layout)
         return nullptr;
     return layout->takeAt(layout->count() - 1);
 }
+
+int widgetsWidth(QLayout* layout)
+{
+    int totalWidth = 0;
+    for (int c = 0; c < layout->count(); ++c){
+        totalWidth += layout->itemAt(c)->widget()->width();
+    }
+    return totalWidth;
+}
+
+bool changeWidgetsWidthBy(QLayout* layout, int change)
+{
+    QFont font = static_cast<ElementDisplay*>(layout->itemAt(0)->widget())->font();
+    font.setPointSize(font.pointSize() + change);
+    if (font.pointSize() > g_bigPointSize || font.pointSize() < g_smallPointSize){
+        return false;
+    }
+
+    for (int c = 0; c < layout->count(); ++c){
+        auto* display = static_cast<ElementDisplay*>(layout->itemAt(c)->widget());
+        display->setFont(font);
+        display->adjustSize();
+        display->updateGeometry();
+    }
+    return true;
+}
 } // namespace
 
 
@@ -185,32 +211,27 @@ void Display::alignElementDisplayContent()
         }
     }
 
-    if (lastLineLayout->count() > 0){
-        int totalWidth = 0;
-        for (int c = 0; c < lastLineLayout->count(); ++c){
-            totalWidth += lastLineLayout->itemAt(c)->widget()->width();
-        }
-        while (totalWidth > 360){
-            QFont font = static_cast<ElementDisplay*>(lastLineLayout->itemAt(0)->widget())->font();
-            font.setPointSize(font.pointSize() - 2);
-            if (font.pointSize() < g_smallPointSize)
-                break;
-
-            for (int c = 0; c < lastLineLayout->count(); ++c){
-                auto* display = static_cast<ElementDisplay*>(lastLineLayout->itemAt(c)->widget());
-                display->setFont(font);
-                display->adjustSize();
-                display->updateGeometry();
-            }
-            totalWidth = 0;
-            for (int c = 0; c < lastLineLayout->count(); ++c){
-                totalWidth += lastLineLayout->itemAt(c)->widget()->width();
-            }
-        }
-    }
-
+    adjustLastLineFontSize();
     adjustElementsDisplayGeo(newLineAdded);
     update();
+}
+
+void Display::adjustLastLineFontSize(){
+    auto* lastLineLayout = static_cast<QHBoxLayout*>(lastItemInLayout(layout())->layout());
+    if (!lastLineLayout || lastLineLayout->isEmpty())
+        return;
+    int totalWidth = widgetsWidth(lastLineLayout);
+    while (totalWidth < 360){
+        if (!changeWidgetsWidthBy(lastLineLayout, 1))
+            break;
+        totalWidth = widgetsWidth(lastLineLayout);
+    }
+
+    while (totalWidth > 360){
+        if (!changeWidgetsWidthBy(lastLineLayout, -1))
+            break;
+        totalWidth = widgetsWidth(lastLineLayout);
+    }
 }
 
 void Display::adjustElementsDisplayGeo(bool newLineAdded)
@@ -230,7 +251,7 @@ void Display::adjustElementsDisplayGeo(bool newLineAdded)
         }
     }
     updateConnectionForSecondLastLine();
-    regeneratePaths();
+    // regeneratePaths();
 }
 
 void Display::updateConnectionForSecondLastLine()
@@ -302,9 +323,11 @@ void Display::addPath(ElementDisplay* one, ElementDisplay* other)
 
 void Display::paintEvent(QPaintEvent* event)
 {
-    if (ElementDisplay::showConnections)
-        drawPaths();
     QWidget::paintEvent(event);
+    if (ElementDisplay::showConnections){
+        regeneratePaths();
+        drawPaths();
+    }
 }
 
 void Display::resizeEvent(QResizeEvent *event)
@@ -376,6 +399,8 @@ ScrollDisplay::ScrollDisplay(QWidget *parent): QScrollArea(parent)
 
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    horizontalScrollBar()->setSingleStep(5);
+    verticalScrollBar()->setSingleStep(5);
     connect(horizontalScrollBar(), &QScrollBar::rangeChanged, this, &ScrollDisplay::onHorizontalRangeChanged);
     connect(verticalScrollBar(), &QScrollBar::rangeChanged, this, &ScrollDisplay::onVerticalRangeChanged);
 
@@ -399,6 +424,8 @@ ScrollDisplay::ScrollDisplay(QWidget *parent): QScrollArea(parent)
     toggleMenu(false);
     _menu->raise();
     _menuButton->raise();
+
+    setStyleSheet(QStringLiteral("QScrollArea{border: none;}"));
 }
 
 void ScrollDisplay::paintEvent(QPaintEvent *event)
@@ -411,10 +438,10 @@ bool ElementDisplay::showConnections = true;
 
 void ScrollDisplay::wheelEvent(QWheelEvent *event)
 {
-    if (event->modifiers() == Qt::ShiftModifier) // If shift key is pressed
+    if (event->modifiers() & Qt::ShiftModifier) // If shift key is pressed
     {
         QWheelEvent horizontalEvent(event->position(), event->globalPosition(), event->pixelDelta(), event->angleDelta().transposed(),
-                                    event->buttons(), event->modifiers(), event->phase(), true);
+                                    event->buttons(), event->modifiers() ^ Qt::ShiftModifier, event->phase(), true);
         QScrollArea::wheelEvent(&horizontalEvent);
     }
     else
