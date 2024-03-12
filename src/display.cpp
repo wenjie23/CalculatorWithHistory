@@ -131,7 +131,6 @@ void Display::alignElementDisplayContent()
                 if (!display)
                     continue;
                 display->show();
-                qDebug() << display->height();
                 QFont font = display->font();
                 font.setPointSize(g_smallPointSize);
                 display->setFont(font);
@@ -139,8 +138,6 @@ void Display::alignElementDisplayContent()
                 palette.setColor(QPalette::WindowText, g_historyTextColor);
                 display->setPalette(palette);
                 display->setFixedHeight(g_smallFontWidgetHeight);
-
-                qDebug() << "up" << display->height();
             }
         }
         auto* lineLayout = new QHBoxLayout(this);
@@ -248,8 +245,6 @@ void Display::updateConnectionForSecondLastLine()
         if (!display)
             continue;
         display->clearAllNext();
-
-        qDebug() << "ohoh" << display->height();
     }
 
     auto* lastLine = layout()->itemAt(displayLineCount - 1)->layout();
@@ -450,8 +445,6 @@ void ScrollDisplay::toggleMenu(bool show)
     repaint(_menu->geometry());
 }
 
-#include "moc_display.cpp"
-
 ElementDisplay::ElementDisplay(QWidget *parent, Element *element, bool showConnection) : QLabel(parent)
 {
     setElement(element);
@@ -522,3 +515,5 @@ void ElementDisplay::updateElementText()
         textToShow = QStringLiteral("(") % textToShow % QStringLiteral(")");
     setText(textToShow);
 }
+
+#include "moc_display.cpp"

@@ -85,6 +85,11 @@ void MainWindow::unaryOperatorClicked(const QString& op)
     if (_equationQueue->empty() || _equationQueue->back().empty() ||
         !dynamic_cast<Number*>(_equationQueue->back().back().get()))
         return;
+    if (_equationQueue->back().completed()){
+        Equation equation;
+        equation.push_back(std::make_shared<Number>(static_cast<Number*>(_equationQueue->back().back().get())->value()));
+        _equationQueue->push_back((equation));
+    }
     auto* const number = static_cast<Number*>(_equationQueue->back().back().get());
     const auto numberText = number->text();
     if (op == g_signOperatorText) {
