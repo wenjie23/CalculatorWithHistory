@@ -87,8 +87,8 @@ bool changeWidgetsWidthBy(QLayout* layout, int change)
 } // namespace
 
 
-ElementPath::ElementPath(ElementDisplay* start, ElementDisplay* end, const QColor &color, QObject* parent):
-    QObject(parent), start(start), end(end), color(color)
+ElementPath::ElementPath(ElementDisplay* start, ElementDisplay* end, QObject* parent):
+    QObject(parent), start(start), end(end)
 {
     update();
 }
@@ -251,7 +251,6 @@ void Display::adjustElementsDisplayGeo(bool newLineAdded)
         }
     }
     updateConnectionForSecondLastLine();
-    // regeneratePaths();
 }
 
 void Display::updateConnectionForSecondLastLine()
@@ -310,21 +309,16 @@ void Display::regeneratePaths()
 
 void Display::addPath(ElementDisplay* one, ElementDisplay* other)
 {
-    QColor color;
-    if (one->connectColor().spec() != QColor::Invalid) {
-        color = one->connectColor();
-    } else {
-        color.setHsl(QRandomGenerator::global()->bounded(361), 92, 158);
-        one->setConnectColor(color);
+    if (!one->connectColor()->isValid()) {
+        one->connectColor()->setHsl((std::hash<double>{}(static_cast<Number*>(one->element())->value()) % 361), 92, 158);
     }
-    other->setConnectColor(color);
-    _paths.emplace_back(new ElementPath(one, other, color, this));
+    _paths.emplace_back(std::make_unique<ElementPath>(one, other, this));
 }
 
 void Display::paintEvent(QPaintEvent* event)
 {
     QWidget::paintEvent(event);
-    if (ElementDisplay::showConnections){
+    if (ElementDisplay::_showConnections){
         regeneratePaths();
         drawPaths();
     }
@@ -332,7 +326,7 @@ void Display::paintEvent(QPaintEvent* event)
 
 void Display::resizeEvent(QResizeEvent *event)
 {
-    for (auto* path : _paths) {
+    for (auto& path : _paths) {
         path->update();
     }
     QWidget::resizeEvent(event);
@@ -342,8 +336,8 @@ void Display::drawPaths()
 {
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
-    for (auto* path : _paths) {
-        QPen pen(path->color, g_connectionLineWidth);
+    for (auto& path : _paths) {
+        QPen pen(*(path->start->connectColor()), g_connectionLineWidth);
         pen.setStyle(Qt::DashLine);
         painter.setPen(pen);
         painter.drawPath(*path);
@@ -377,9 +371,9 @@ void Display::pasteAllResults() const
 
 void Display::toggleConnection(bool show)
 {
-    if (ElementDisplay::showConnections == show)
+    if (ElementDisplay::_showConnections == show)
         return;
-    ElementDisplay::showConnections = show;
+    ElementDisplay::_showConnections = show;
     update();
 }
 
@@ -401,8 +395,8 @@ ScrollDisplay::ScrollDisplay(QWidget *parent): QScrollArea(parent)
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     horizontalScrollBar()->setSingleStep(5);
     verticalScrollBar()->setSingleStep(5);
-    connect(horizontalScrollBar(), &QScrollBar::rangeChanged, this, &ScrollDisplay::onHorizontalRangeChanged);
-    connect(verticalScrollBar(), &QScrollBar::rangeChanged, this, &ScrollDisplay::onVerticalRangeChanged);
+    connect(horizontalScrollBar(), &QScrollBar::rangeChanged, this, &ScrollDisplay::setBarToMax);
+    connect(verticalScrollBar(), &QScrollBar::rangeChanged, this, &ScrollDisplay::setBarToMax);
 
     _menu = new Menu(this);
     connect(_menu, &Menu::pasteButtonClicked, display, &Display::pasteAllResults);
@@ -434,7 +428,7 @@ void ScrollDisplay::paintEvent(QPaintEvent *event)
     _menuButton->raise();
     QScrollArea::paintEvent(event);
 }
-bool ElementDisplay::showConnections = true;
+bool ElementDisplay::_showConnections = true;
 
 void ScrollDisplay::wheelEvent(QWheelEvent *event)
 {
@@ -450,18 +444,10 @@ void ScrollDisplay::wheelEvent(QWheelEvent *event)
     }
 }
 
-void ScrollDisplay::onHorizontalRangeChanged(int min, int max)
+void ScrollDisplay::setBarToMax()
 {
-    horizontalScrollBar()->setValue(max);
-    _menu->raise();
-    _menuButton->raise();
-}
-
-void ScrollDisplay::onVerticalRangeChanged(int min, int max)
-{
-    verticalScrollBar()->setValue(max);
-    _menu->raise();
-    _menuButton->raise();
+    verticalScrollBar()->setValue(verticalScrollBar()->maximum());
+    horizontalScrollBar()->setValue(horizontalScrollBar()->maximum());
 }
 
 void ScrollDisplay::toggleMenu(bool show)
@@ -472,7 +458,8 @@ void ScrollDisplay::toggleMenu(bool show)
     repaint(_menu->geometry());
 }
 
-ElementDisplay::ElementDisplay(QWidget *parent, Element *element, bool showConnection) : QLabel(parent)
+ElementDisplay::ElementDisplay(QWidget *parent, Element *element, bool showConnection) : QLabel(parent),
+    _connectColor(std::make_shared<QColor>())
 {
     setElement(element);
     setMargin(2);
@@ -491,9 +478,9 @@ ElementDisplay::ElementDisplay(QWidget *parent, Element *element, bool showConne
 void ElementDisplay::paintEvent(QPaintEvent *event)
 {
     QLabel::paintEvent(event);
-    if (showConnections && (!_nexts.empty() || _previous )) {
+    if (_showConnections && (!_nexts.empty() || _previous )) {
         QPainter painter(this);
-        QPen pen(_connectColor.spec() == QColor::Invalid ? Qt::gray : _connectColor, g_connectionLineWidth);
+        QPen pen(_connectColor == nullptr ? Qt::gray : *_connectColor, g_connectionLineWidth);
         pen.setStyle(Qt::DashLine);
         painter.setPen(pen);
         painter.setRenderHint(QPainter::Antialiasing);
@@ -519,13 +506,18 @@ void ElementDisplay::addNext(ElementDisplay *display)
         return;
     _nexts.push_back(display);
     display->_previous = this;
+    if (!_connectColor)
+        _connectColor = std::make_shared<QColor>();
+    display->_connectColor = _connectColor;
 }
 
 void ElementDisplay::clearAllNext()
 {
     while (!_nexts.empty()) {
-        if (_nexts.back())
+        if (_nexts.back()){
             _nexts.back()->_previous = nullptr;
+            _nexts.back()->_connectColor.reset();
+        }
         _nexts.pop_back();
     }
 }

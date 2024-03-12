@@ -47,7 +47,6 @@ MainWindow::MainWindow(QWidget *parent)
 
     _equationQueue = std::make_shared<EquationQueue>();
     static_cast<Display*>(ui->display->widget())->setEquations(_equationQueue);
-    // ui->display->scrollArea = ui->displayArea;
 
     setWindowTitle("CalculatorWithHistory");
     setFixedSize(g_windowSize);

@@ -17,15 +17,13 @@ class QToolButton;
 
 class ElementPath : public QObject, public QPainterPath
 {
-    // Q_OBJECT
 public:
-    ElementPath(ElementDisplay* start, ElementDisplay* end, const QColor& color, QObject* parent);
+    ElementPath(ElementDisplay* start, ElementDisplay* end, QObject* parent);
     QPointF startPoint() const;
     QPointF endPoint() const;
     void update();
     ElementDisplay* start;
     ElementDisplay* end;
-    QColor color;
     bool dirty = true;
 };
 
@@ -42,8 +40,7 @@ protected:
 
 private slots:
     void toggleMenu(bool show);
-    void onHorizontalRangeChanged(int min, int max);
-    void onVerticalRangeChanged(int min, int max);
+    void setBarToMax();
 
 private:
 
@@ -84,7 +81,7 @@ private:
     void addPath(ElementDisplay* one, ElementDisplay* other);
 
     std::shared_ptr<EquationQueue> _equations;
-    std::vector<ElementPath*> _paths;
+    std::vector<std::unique_ptr<ElementPath>> _paths;
 };
 
 class ElementDisplay : public QLabel
@@ -99,8 +96,8 @@ public:
 
     Element* element() const;
     void setElement(Element* e);
-    QColor connectColor() const { return _connectColor; }
-    void setConnectColor(const QColor color) { _connectColor = color; }
+    std::shared_ptr<QColor> connectColor() const { return _connectColor; }
+    void setConnectColor(const std::shared_ptr<QColor>& color) { _connectColor = color; }
 
     const std::vector<QPointer<ElementDisplay>>& nexts() { return _nexts; };
     void addNext(ElementDisplay* display);
@@ -113,7 +110,7 @@ private:
     QPointer<Element> _element;
     std::vector<QPointer<ElementDisplay>> _nexts;
     QPointer<ElementDisplay> _previous;
-    QColor _connectColor;
-    static bool showConnections;
+    std::shared_ptr<QColor> _connectColor;
+    static bool _showConnections;
 };
 #endif // DISPLAY_H
