@@ -132,6 +132,19 @@ QToolButton:pressed{
     </widget>
    </item>
    <item>
+    <widget class="BubbleToolButton" name="copyButton">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="text">
+      <string>...</string>
+     </property>
+    </widget>
+   </item>
+   <item>
     <widget class="QToolButton" name="clearButton">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -162,6 +175,13 @@ QToolButton:pressed{
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>BubbleToolButton</class>
+   <extends>QToolButton</extends>
+   <header>bubble_tool_button.h</header>
+  </customwidget>
+ </customwidgets>
  <resources>
   <include location="../resource/icons.qrc"/>
  </resources>

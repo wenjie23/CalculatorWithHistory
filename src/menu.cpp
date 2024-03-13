@@ -11,6 +11,9 @@ Menu::Menu(QWidget* parent) : QFrame(parent), ui(new Ui::Menu)
 {
     ui->setupUi(this);
     setFixedSize(g_menuSize);
+    QIcon icon;
+    icon.addFile(QString::fromUtf8(":/Button/correct.png"), QSize(), QIcon::Normal, QIcon::Off);
+    ui->copyButton->setClickedIcon(icon);
 }
 
 Menu::~Menu() { delete ui; }
