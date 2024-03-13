@@ -43,14 +43,12 @@ static const QSize g_menuButtonSize(34, 30);
 static const QPoint g_menuButtonPos(4, 3);
 static const QString g_menuButtonFileName(":/Button/menu_hamburger.png");
 
-
 QLayoutItem* lastItemInLayout(QLayout* layout)
 {
     if (!layout)
         return nullptr;
     return layout->itemAt(layout->count() - 1);
 }
-
 
 QLayoutItem* takeLastItemInLayout(QLayout* layout)
 {
@@ -62,7 +60,7 @@ QLayoutItem* takeLastItemInLayout(QLayout* layout)
 int widgetsWidth(QLayout* layout)
 {
     int totalWidth = 0;
-    for (int c = 0; c < layout->count(); ++c){
+    for (int c = 0; c < layout->count(); ++c) {
         totalWidth += layout->itemAt(c)->widget()->width();
     }
     return totalWidth;
@@ -72,11 +70,11 @@ bool changeWidgetsWidthBy(QLayout* layout, int change)
 {
     QFont font = static_cast<ElementDisplay*>(layout->itemAt(0)->widget())->font();
     font.setPointSize(font.pointSize() + change);
-    if (font.pointSize() > g_bigPointSize || font.pointSize() < g_smallPointSize){
+    if (font.pointSize() > g_bigPointSize || font.pointSize() < g_smallPointSize) {
         return false;
     }
 
-    for (int c = 0; c < layout->count(); ++c){
+    for (int c = 0; c < layout->count(); ++c) {
         auto* display = static_cast<ElementDisplay*>(layout->itemAt(c)->widget());
         display->setFont(font);
         display->adjustSize();
@@ -86,9 +84,8 @@ bool changeWidgetsWidthBy(QLayout* layout, int change)
 }
 } // namespace
 
-
-ElementPath::ElementPath(ElementDisplay* start, ElementDisplay* end, QObject* parent):
-    QObject(parent), start(start), end(end)
+ElementPath::ElementPath(ElementDisplay* start, ElementDisplay* end, QObject* parent)
+    : QObject(parent), start(start), end(end)
 {
     update();
 }
@@ -128,7 +125,6 @@ void ElementPath::update()
 
 Display::Display(QWidget* parent) : QWidget(parent)
 {
-
     auto* vLayout = new QVBoxLayout(this);
     vLayout->setAlignment(Qt::AlignBottom);
     setLayout(vLayout);
@@ -150,10 +146,11 @@ void Display::alignElementDisplayContent()
 {
     bool newLineAdded = false;
     if (_equations->size() > layout()->count()) {
-        if (!layout()->isEmpty()){
+        if (!layout()->isEmpty()) {
             auto* const lastLineOfLayout = lastItemInLayout(layout())->layout();
-            for (int i = 0; i < lastLineOfLayout->count(); ++i){
-                auto* display = dynamic_cast<ElementDisplay*>(lastLineOfLayout->itemAt(i)->widget());
+            for (int i = 0; i < lastLineOfLayout->count(); ++i) {
+                auto* display =
+                    dynamic_cast<ElementDisplay*>(lastLineOfLayout->itemAt(i)->widget());
                 if (!display)
                     continue;
                 display->show();
@@ -172,15 +169,15 @@ void Display::alignElementDisplayContent()
         newLineAdded = true;
     }
     while (_equations->size() < layout()->count()) {
-        auto* const lastLineItem =  takeLastItemInLayout(layout());
-        while (auto* lastItem =  takeLastItemInLayout(lastLineItem->layout())){
+        auto* const lastLineItem = takeLastItemInLayout(layout());
+        while (auto* lastItem = takeLastItemInLayout(lastLineItem->layout())) {
             delete lastItem->widget();
             delete lastItem;
         }
         delete lastLineItem->layout();
     }
 
-    if (_equations->empty() && layout()->count() == 0){
+    if (_equations->empty() && layout()->count() == 0) {
         adjustElementsDisplayGeo(newLineAdded);
         repaint();
         return;
@@ -200,14 +197,17 @@ void Display::alignElementDisplayContent()
         return;
     }
     for (int i = std::max(int(equation.size()) - 2, 0); i < equation.size(); ++i) {
-        if (i >= lastLineLayout->count()){
+        if (i >= lastLineLayout->count()) {
             auto* display = new ElementDisplay(this, equation[i].get());
-            if (lastLineLayout->count() > 0){
-                display->setFont(static_cast<ElementDisplay*>(lastItemInLayout(lastLineLayout)->widget())->font());
+            if (lastLineLayout->count() > 0) {
+                display->setFont(
+                    static_cast<ElementDisplay*>(lastItemInLayout(lastLineLayout)->widget())
+                        ->font());
             }
             lastLineLayout->addWidget(display);
         } else {
-            static_cast<ElementDisplay*>(lastItemInLayout(lastLineLayout)->widget())->setElement(equation[i].get());
+            static_cast<ElementDisplay*>(lastItemInLayout(lastLineLayout)->widget())
+                ->setElement(equation[i].get());
         }
     }
 
@@ -216,18 +216,19 @@ void Display::alignElementDisplayContent()
     update();
 }
 
-void Display::adjustLastLineFontSize(){
+void Display::adjustLastLineFontSize()
+{
     auto* lastLineLayout = static_cast<QHBoxLayout*>(lastItemInLayout(layout())->layout());
     if (!lastLineLayout || lastLineLayout->isEmpty())
         return;
     int totalWidth = widgetsWidth(lastLineLayout);
-    while (totalWidth < 360){
+    while (totalWidth < 360) {
         if (!changeWidgetsWidthBy(lastLineLayout, 1))
             break;
         totalWidth = widgetsWidth(lastLineLayout);
     }
 
-    while (totalWidth > 360){
+    while (totalWidth > 360) {
         if (!changeWidgetsWidthBy(lastLineLayout, -1))
             break;
         totalWidth = widgetsWidth(lastLineLayout);
@@ -236,18 +237,16 @@ void Display::adjustLastLineFontSize(){
 
 void Display::adjustElementsDisplayGeo(bool newLineAdded)
 {
-    for (int i = 0; i < layout()->count(); ++i)
-    {
+    for (int i = 0; i < layout()->count(); ++i) {
         auto* line = layout()->itemAt(i)->layout();
         if (!line)
             continue;
-        for (int c = 0; c < line->count(); ++c){
+        for (int c = 0; c < line->count(); ++c) {
             auto* display = dynamic_cast<ElementDisplay*>(line->itemAt(c)->widget());
-            if (display){
+            if (display) {
                 display->updateGeometry();
                 display->show();
             }
-
         }
     }
     updateConnectionForSecondLastLine();
@@ -255,12 +254,11 @@ void Display::adjustElementsDisplayGeo(bool newLineAdded)
 
 void Display::updateConnectionForSecondLastLine()
 {
-
     const int displayLineCount = layout()->count();
     if (displayLineCount < 2)
         return;
     auto* secondLastLine = layout()->itemAt(displayLineCount - 2)->layout();
-    for (int column = 0; column < secondLastLine->count(); ++column){
+    for (int column = 0; column < secondLastLine->count(); ++column) {
         auto* display = dynamic_cast<ElementDisplay*>(secondLastLine->itemAt(column)->widget());
         if (!display)
             continue;
@@ -268,9 +266,9 @@ void Display::updateConnectionForSecondLastLine()
     }
 
     auto* lastLine = layout()->itemAt(displayLineCount - 1)->layout();
-    for (int column = secondLastLine->count() - 1; column >= 0; --column){
-        auto* const displayFromPreviousLine = dynamic_cast<ElementDisplay*>(
-            secondLastLine->itemAt(column)->widget());
+    for (int column = secondLastLine->count() - 1; column >= 0; --column) {
+        auto* const displayFromPreviousLine =
+            dynamic_cast<ElementDisplay*>(secondLastLine->itemAt(column)->widget());
         if (!displayFromPreviousLine)
             continue;
         auto* const previousLineElement = dynamic_cast<Number*>(displayFromPreviousLine->element());
@@ -278,13 +276,14 @@ void Display::updateConnectionForSecondLastLine()
             continue;
         for (int latestDisplayIndex = lastLine->count() - 1; latestDisplayIndex >= 0;
              --latestDisplayIndex) {
-            auto* lastLineDisplay = dynamic_cast<ElementDisplay*>(lastLine->itemAt(latestDisplayIndex)->widget());
+            auto* lastLineDisplay =
+                dynamic_cast<ElementDisplay*>(lastLine->itemAt(latestDisplayIndex)->widget());
             if (!lastLineDisplay)
                 continue;
             auto* lastLineElement = dynamic_cast<Number*>(lastLineDisplay->element());
 
             if (lastLineElement && !lastLineDisplay->_previous &&
-                (*previousLineElement)==(*lastLineElement)) {
+                (*previousLineElement) == (*lastLineElement)) {
                 displayFromPreviousLine->addNext(lastLineDisplay);
             }
         }
@@ -294,9 +293,9 @@ void Display::updateConnectionForSecondLastLine()
 void Display::regeneratePaths()
 {
     _paths.clear();
-    for (int r = 0; r < layout()->count(); ++r){
+    for (int r = 0; r < layout()->count(); ++r) {
         auto* line = layout()->itemAt(r)->layout();
-        for (int c = 0; c < line->count(); ++c){
+        for (int c = 0; c < line->count(); ++c) {
             auto* display = dynamic_cast<ElementDisplay*>(line->itemAt(c)->widget());
             for (const auto& next : display->nexts()) {
                 if (!next)
@@ -310,7 +309,8 @@ void Display::regeneratePaths()
 void Display::addPath(ElementDisplay* one, ElementDisplay* other)
 {
     if (!one->connectColor()->isValid()) {
-        one->connectColor()->setHsl((std::hash<double>{}(static_cast<Number*>(one->element())->value()) % 361), 92, 158);
+        one->connectColor()->setHsl(
+            (std::hash<double>{}(static_cast<Number*>(one->element())->value()) % 361), 92, 158);
     }
     _paths.emplace_back(std::make_unique<ElementPath>(one, other, this));
 }
@@ -318,13 +318,13 @@ void Display::addPath(ElementDisplay* one, ElementDisplay* other)
 void Display::paintEvent(QPaintEvent* event)
 {
     QWidget::paintEvent(event);
-    if (ElementDisplay::_showConnections){
+    if (ElementDisplay::_showConnections) {
         regeneratePaths();
         drawPaths();
     }
 }
 
-void Display::resizeEvent(QResizeEvent *event)
+void Display::resizeEvent(QResizeEvent* event)
 {
     for (auto& path : _paths) {
         path->update();
@@ -348,16 +348,15 @@ void Display::pasteAllResults() const
 {
     QString result;
 
-    for (int r = 0; r < layout()->count(); ++r)
-    {
+    for (int r = 0; r < layout()->count(); ++r) {
         auto* line = layout()->itemAt(r)->layout();
         assert(line);
-        for (int c = 0; c < line->count(); ++c){
+        for (int c = 0; c < line->count(); ++c) {
             auto* display = static_cast<ElementDisplay*>(line->itemAt(c)->widget());
             assert(display);
 
             result.append(display->text());
-            if (display){
+            if (display) {
                 display->updateGeometry();
                 display->show();
             }
@@ -383,13 +382,12 @@ void Display::clearAllHistory()
     emit _equations->changed();
 }
 
-ScrollDisplay::ScrollDisplay(QWidget *parent): QScrollArea(parent)
+ScrollDisplay::ScrollDisplay(QWidget* parent) : QScrollArea(parent)
 {
     auto* display = new Display(this);
     setWidget(display);
     setWidgetResizable(true);
     setAlignment(Qt::AlignLeft | Qt::AlignBottom);
-
 
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -399,13 +397,15 @@ ScrollDisplay::ScrollDisplay(QWidget *parent): QScrollArea(parent)
     connect(verticalScrollBar(), &QScrollBar::rangeChanged, this, &ScrollDisplay::setBarToMax);
 
     _menu = new Menu(this);
-    connect(_menu, &Menu::pasteButtonClicked, display, &Display::pasteAllResults);
+    connect(_menu, &Menu::copyButtonClicked, display, &Display::pasteAllResults);
     connect(_menu, &Menu::connectionButtonToggled, display, &Display::toggleConnection);
     connect(_menu, &Menu::clearButtonClicked, display, &Display::clearAllHistory);
+    _menu->move(-_menu->width(), _menu->y());
 
     _animation = new QPropertyAnimation(_menu, "pos", this);
     _animation->setDuration(g_animationDuration);
     _animation->setEasingCurve(QEasingCurve::InOutQuad);
+    toggleMenu(false);
 
     _menuButton = new QToolButton(this);
     _menuButton->setIcon(QIcon(g_menuButtonFileName));
@@ -415,14 +415,12 @@ ScrollDisplay::ScrollDisplay(QWidget *parent): QScrollArea(parent)
     _menuButton->setCheckable(true);
     connect(_menuButton, &QPushButton::toggled, this, &ScrollDisplay::toggleMenu);
 
-    toggleMenu(false);
     _menu->raise();
     _menuButton->raise();
-
     setStyleSheet(QStringLiteral("QScrollArea{border: none;}"));
 }
 
-void ScrollDisplay::paintEvent(QPaintEvent *event)
+void ScrollDisplay::paintEvent(QPaintEvent* event)
 {
     _menu->raise();
     _menuButton->raise();
@@ -430,16 +428,15 @@ void ScrollDisplay::paintEvent(QPaintEvent *event)
 }
 bool ElementDisplay::_showConnections = true;
 
-void ScrollDisplay::wheelEvent(QWheelEvent *event)
+void ScrollDisplay::wheelEvent(QWheelEvent* event)
 {
     if (event->modifiers() & Qt::ShiftModifier) // If shift key is pressed
     {
-        QWheelEvent horizontalEvent(event->position(), event->globalPosition(), event->pixelDelta(), event->angleDelta().transposed(),
-                                    event->buttons(), event->modifiers() ^ Qt::ShiftModifier, event->phase(), true);
+        QWheelEvent horizontalEvent(event->position(), event->globalPosition(), event->pixelDelta(),
+                                    event->angleDelta().transposed(), event->buttons(),
+                                    event->modifiers() ^ Qt::ShiftModifier, event->phase(), true);
         QScrollArea::wheelEvent(&horizontalEvent);
-    }
-    else
-    {
+    } else {
         QScrollArea::wheelEvent(event);
     }
 }
@@ -458,8 +455,8 @@ void ScrollDisplay::toggleMenu(bool show)
     repaint(_menu->geometry());
 }
 
-ElementDisplay::ElementDisplay(QWidget *parent, Element *element, bool showConnection) : QLabel(parent),
-    _connectColor(std::make_shared<QColor>())
+ElementDisplay::ElementDisplay(QWidget* parent, Element* element, bool showConnection)
+    : QLabel(parent), _connectColor(std::make_shared<QColor>())
 {
     setElement(element);
     setMargin(2);
@@ -475,10 +472,10 @@ ElementDisplay::ElementDisplay(QWidget *parent, Element *element, bool showConne
     setFixedHeight(g_bigFontWidgetHeight);
 }
 
-void ElementDisplay::paintEvent(QPaintEvent *event)
+void ElementDisplay::paintEvent(QPaintEvent* event)
 {
     QLabel::paintEvent(event);
-    if (_showConnections && (!_nexts.empty() || _previous )) {
+    if (_showConnections && (!_nexts.empty() || _previous)) {
         QPainter painter(this);
         QPen pen(_connectColor == nullptr ? Qt::gray : *_connectColor, g_connectionLineWidth);
         pen.setStyle(Qt::DashLine);
@@ -488,9 +485,9 @@ void ElementDisplay::paintEvent(QPaintEvent *event)
     }
 }
 
-Element *ElementDisplay::element() const { return _element; }
+Element* ElementDisplay::element() const { return _element; }
 
-void ElementDisplay::setElement(Element *e)
+void ElementDisplay::setElement(Element* e)
 {
     if (_element == e)
         return;
@@ -500,7 +497,7 @@ void ElementDisplay::setElement(Element *e)
     updateElementText();
 }
 
-void ElementDisplay::addNext(ElementDisplay *display)
+void ElementDisplay::addNext(ElementDisplay* display)
 {
     if (!display)
         return;
@@ -514,7 +511,7 @@ void ElementDisplay::addNext(ElementDisplay *display)
 void ElementDisplay::clearAllNext()
 {
     while (!_nexts.empty()) {
-        if (_nexts.back()){
+        if (_nexts.back()) {
             _nexts.back()->_previous = nullptr;
             _nexts.back()->_connectColor.reset();
         }

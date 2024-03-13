@@ -12,6 +12,8 @@ QtApplication {
         "src/"
     ]
 
+    cpp.cxxLanguageVersion: "c++14"
+
     files: [
         "README.md",
         "resource/icons.qrc",

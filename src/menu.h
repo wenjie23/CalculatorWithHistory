@@ -19,14 +19,14 @@ public:
     ~Menu();
 
 signals:
-    void pasteButtonClicked();
+    void copyButtonClicked();
     void connectionButtonToggled(bool checked);
     void clearButtonClicked();
 
 private slots:
     void on_clearButton_clicked();
     void on_connectionSwitch_toggled(bool checked);
-    void on_pasteButton_clicked();
+    void on_copyButton_clicked();
 
 private:
     Ui::Menu* ui;
