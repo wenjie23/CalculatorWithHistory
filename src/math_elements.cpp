@@ -10,7 +10,7 @@
 
 extern const QString g_plus("+");
 extern const QString g_minus("-");
-extern const QString g_multiply("*");
+extern const QString g_multiply("×");
 extern const QString g_divide("÷");
 
 namespace {
@@ -42,7 +42,7 @@ double Equation::calculate() const
             continue;
         }
         if (!calcuationStack.empty() && dynamic_cast<Operator*>(calcuationStack.back().get())) {
-            if (calcuationStack.back()->text() == "*" || calcuationStack.back()->text() == "/") {
+            if (calcuationStack.back()->text() == g_multiply || calcuationStack.back()->text() == g_divide) {
                 const QString op = calcuationStack.back()->text();
                 calcuationStack.pop_back();
                 double value = calcuationStack.back()->text().toDouble();
@@ -133,8 +133,8 @@ bool Equation::tryPopCharacter()
     const bool successful = number->trySetValue(numberText);
     if (!successful) {
         pop_back();
-        return true;
     }
+    return true;
 }
 
 bool Number::trySetValue(const QString& s)

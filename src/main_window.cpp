@@ -46,7 +46,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->period, &QPushButton::clicked, this, &MainWindow::periodClicked);
 
     _equationQueue = std::make_shared<EquationQueue>();
-    ui->display->setEquations(_equationQueue);
+    static_cast<Display*>(ui->display->widget())->setEquations(_equationQueue);
 
     setWindowTitle("CalculatorWithHistory");
     setFixedSize(g_windowSize);
@@ -84,6 +84,11 @@ void MainWindow::unaryOperatorClicked(const QString& op)
     if (_equationQueue->empty() || _equationQueue->back().empty() ||
         !dynamic_cast<Number*>(_equationQueue->back().back().get()))
         return;
+    if (_equationQueue->back().completed()){
+        Equation equation;
+        equation.push_back(std::make_shared<Number>(static_cast<Number*>(_equationQueue->back().back().get())->value()));
+        _equationQueue->push_back((equation));
+    }
     auto* const number = static_cast<Number*>(_equationQueue->back().back().get());
     const auto numberText = number->text();
     if (op == g_signOperatorText) {
