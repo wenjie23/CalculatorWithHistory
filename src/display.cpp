@@ -112,14 +112,13 @@ void ElementPath::update()
     moveTo(startP);
     const double dx = endP.x() - startP.x();
     const double dy = endP.y() - startP.y();
-    const double dist = qSqrt(dx * dx + dy * dy);
-    const double angle = qAtan2(dy, dx);
-    const double offsetX = dist * 0.15 * qCos(angle + (dx > 0 ? M_PI / 8 : -M_PI / 8));
-    const double offsetY = dist * 0.15 * qSin(angle + (dx > 0 ? M_PI / 8 : -M_PI / 8));
+    const int directionModifier = dx > 0 ? 1 : -1;
+    constexpr double angle = qDegreesToRadians(30.f);
+    const double offsetX = dy * qSin(angle);
+    const double offsetY = dy * qCos(angle);
 
-    const QPointF c1(startP.x() + offsetX, startP.y() + offsetY);
-    const QPointF c2(endP.x() - offsetX, endP.y() - offsetY);
-
+    const QPointF c1(startP.x() + directionModifier * offsetX, startP.y() + offsetY);
+    const QPointF c2(endP.x() - directionModifier * offsetX, endP.y() - offsetY);
     cubicTo(c1, c2, endP);
 }
 
