@@ -179,7 +179,7 @@ void Display::alignElementDisplayContent()
 
     if (_equations->empty() && layout()->count() == 0) {
         adjustElementsDisplayGeo(newLineAdded);
-        repaint();
+        update();
         return;
     }
 
@@ -193,7 +193,7 @@ void Display::alignElementDisplayContent()
     if (equation.empty()) {
         lastLineLayout->insertWidget(-1, new ElementDisplay(this));
         adjustElementsDisplayGeo(newLineAdded);
-        repaint();
+        update();
         return;
     }
     for (int i = std::max(int(equation.size()) - 2, 0); i < equation.size(); ++i) {
@@ -204,6 +204,7 @@ void Display::alignElementDisplayContent()
                     static_cast<ElementDisplay*>(lastItemInLayout(lastLineLayout)->widget())
                         ->font());
             }
+            display->show();
             lastLineLayout->addWidget(display);
         } else {
             static_cast<ElementDisplay*>(lastItemInLayout(lastLineLayout)->widget())
@@ -219,7 +220,7 @@ void Display::alignElementDisplayContent()
 void Display::adjustLastLineFontSize()
 {
     auto* lastLineLayout = static_cast<QHBoxLayout*>(lastItemInLayout(layout())->layout());
-    if (!lastLineLayout || lastLineLayout->isEmpty())
+    if (!lastLineLayout || lastLineLayout->count() == 0)
         return;
     int totalWidth = widgetsWidth(lastLineLayout);
     while (totalWidth < 360) {
@@ -317,11 +318,11 @@ void Display::addPath(ElementDisplay* one, ElementDisplay* other)
 
 void Display::paintEvent(QPaintEvent* event)
 {
-    QWidget::paintEvent(event);
     if (ElementDisplay::_showConnections) {
         regeneratePaths();
         drawPaths();
     }
+    QWidget::paintEvent(event);
 }
 
 void Display::resizeEvent(QResizeEvent* event)
@@ -378,8 +379,10 @@ void Display::toggleConnection(bool show)
 
 void Display::clearAllHistory()
 {
-    _equations->clear();
-    emit _equations->changed();
+    if (!_equations->empty()){
+        _equations->clear();
+        emit _equations->changed();
+    }
 }
 
 ScrollDisplay::ScrollDisplay(QWidget* parent) : QScrollArea(parent)
@@ -422,9 +425,9 @@ ScrollDisplay::ScrollDisplay(QWidget* parent) : QScrollArea(parent)
 
 void ScrollDisplay::paintEvent(QPaintEvent* event)
 {
+    QScrollArea::paintEvent(event);
     _menu->raise();
     _menuButton->raise();
-    QScrollArea::paintEvent(event);
 }
 bool ElementDisplay::_showConnections = true;
 
