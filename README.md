@@ -25,7 +25,6 @@ You can download and unzip the binary package from the [release page](https://gi
 This app is still at a very early stage and there are many features and details to be refined. Some of them are:
 
 - Scientific operators.
-- Display with auto-hidden scroll bars.
 - Release on other platforms.
 
 ## License
