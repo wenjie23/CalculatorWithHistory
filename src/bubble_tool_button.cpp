@@ -17,7 +17,6 @@ const QColor g_bubbleBackground(253, 253, 253);
 BubbleWidget::BubbleWidget(QWidget* const anchor)
     : QDialog(anchor), _anchor(anchor), _label(new QLabel(this))
 {
-    assert(anchor->parentWidget());
     setModal(false);
     setWindowFlags(windowFlags() | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
     auto* layout = new QHBoxLayout(this);
@@ -68,9 +67,7 @@ bool BubbleWidget::eventFilter(QObject* watched, QEvent* event)
     if (event->type() == QEvent::Move) {
         auto* moveEvent = static_cast<QMoveEvent*>(event);
         auto* movingWidget = static_cast<QWidget*>(watched);
-        qDebug() << __func__ << watched << moveEvent->pos();
         if (movingWidget == _anchor) {
-            qDebug() << "hohoho";
             move(_anchor->mapToGlobal(
                 QPoint(_anchor->width(), _anchor->height() / 2 - height() / 2)));
         } else {
@@ -128,10 +125,8 @@ void BubbleToolButton::onClicked()
 
 void BubbleToolButton::onTimeOut()
 {
-    qDebug() << __func__;
     setIcon(_previousIcon);
     setEnabled(true);
-
     _bubbleWidget->hide();
 }
 

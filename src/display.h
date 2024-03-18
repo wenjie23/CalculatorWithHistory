@@ -37,6 +37,7 @@ public:
 protected:
     void paintEvent(QPaintEvent* event) override;
     void wheelEvent(QWheelEvent *event) override;
+    bool eventFilter(QObject *watched, QEvent *event) override;
 
 private slots:
     void toggleMenu(bool show);

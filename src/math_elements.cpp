@@ -42,7 +42,8 @@ double Equation::calculate() const
             continue;
         }
         if (!calcuationStack.empty() && dynamic_cast<Operator*>(calcuationStack.back().get())) {
-            if (calcuationStack.back()->text() == g_multiply || calcuationStack.back()->text() == g_divide) {
+            if (calcuationStack.back()->text() == g_multiply ||
+                calcuationStack.back()->text() == g_divide) {
                 const QString op = calcuationStack.back()->text();
                 calcuationStack.pop_back();
                 double value = calcuationStack.back()->text().toDouble();
@@ -63,7 +64,6 @@ double Equation::calculate() const
         double right = calcuationStack.front()->text().toDouble();
         calcuationStack.pop_front();
         resultSoFar = calculateImpl(resultSoFar, right, op);
-        std::cout << resultSoFar << std::endl;
     }
     return resultSoFar;
 }
@@ -163,7 +163,7 @@ Operator::Operator(const QString& op) : Element(op) {}
 
 void EquationQueue::append(uint8_t digit)
 {
-    assert(digit >=0 && digit <= 9);
+    assert(digit >= 0 && digit <= 9);
     if (empty() || back().completed()) {
         Equation equation;
         equation.append(digit);
@@ -191,7 +191,8 @@ void EquationQueue::append(const QString& op)
         return;
     if (back().completed()) {
         Equation equation;
-        equation.push_back(std::make_shared<Number>(static_cast<Number*>(back().back().get())->value()));
+        equation.push_back(
+            std::make_shared<Number>(static_cast<Number*>(back().back().get())->value()));
         equation.append(op);
         push_back((equation));
         popFrontIfExceedLimit();

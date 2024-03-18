@@ -23,24 +23,24 @@
 #include "menu.h"
 
 namespace {
-static const int g_bigPointSize = 48;
-static const int g_smallPointSize = 20;
+static constexpr int g_bigPointSize = 48;
+static constexpr int g_smallPointSize = 20;
 
 static const QString g_fontFamily("Arial");
-static const int g_bigFontWidgetHeight = 76;
-static const int g_smallFontWidgetHeight = 36;
+static constexpr int g_bigFontWidgetHeight = 76;
+static constexpr int g_smallFontWidgetHeight = 36;
 
-static const int g_animationDuration = 300;
+static constexpr int g_animationDuration = 300;
 
-static const int g_hChannelUpperBount = 361;
-static const int g_sChannel = 92;
-static const int g_lChannel = 158;
-static const double g_connectionLineWidth = 1.6;
-static const QColor g_displayTextColor(38, 39, 42);
-static const QColor g_historyTextColor(90, 90, 90);
+static constexpr int g_hChannelUpperBount = 361;
+static constexpr int g_sChannel = 92;
+static constexpr int g_lChannel = 158;
+static constexpr double g_connectionLineWidth = 1.6;
+static constexpr QColor g_displayTextColor(38, 39, 42);
+static constexpr QColor g_historyTextColor(90, 90, 90);
 
-static const QSize g_menuButtonSize(34, 30);
-static const QPoint g_menuButtonPos(4, 3);
+static constexpr QSize g_menuButtonSize(34, 30);
+static constexpr QPoint g_menuButtonPos(4, 3);
 static const QString g_menuButtonFileName(":/Button/menu_hamburger.png");
 
 QLayoutItem* lastItemInLayout(QLayout* layout)
@@ -264,7 +264,6 @@ void Display::updateConnectionForSecondLastLine()
             continue;
         display->clearAllNext();
     }
-
     auto* lastLine = layout()->itemAt(displayLineCount - 1)->layout();
     for (int column = secondLastLine->count() - 1; column >= 0; --column) {
         auto* const displayFromPreviousLine =
@@ -378,7 +377,7 @@ void Display::toggleConnection(bool show)
 
 void Display::clearAllHistory()
 {
-    if (!_equations->empty()){
+    if (!_equations->empty()) {
         _equations->clear();
         emit _equations->changed();
     }
@@ -390,6 +389,7 @@ ScrollDisplay::ScrollDisplay(QWidget* parent) : QScrollArea(parent)
     setWidget(display);
     setWidgetResizable(true);
     setAlignment(Qt::AlignLeft | Qt::AlignBottom);
+    display->installEventFilter(this);
 
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -441,6 +441,19 @@ void ScrollDisplay::wheelEvent(QWheelEvent* event)
     } else {
         QScrollArea::wheelEvent(event);
     }
+}
+
+bool ScrollDisplay::eventFilter(QObject *watched, QEvent *event)
+{
+    if (event->type() != QEvent::Paint)
+        return false;
+    const auto* paintEvent = static_cast<QPaintEvent*>(event);
+    const auto* watchedWidget = static_cast<QWidget*>(watched);
+    const QRect updateRectInCurrentCoordinate = paintEvent->rect().translated(watchedWidget->pos());
+    const QRect menuRectInCurrentCoordinate = _menu->rect().translated(_menu->pos());
+    if (updateRectInCurrentCoordinate.intersects(menuRectInCurrentCoordinate))
+        _menu->update();
+    return false;
 }
 
 void ScrollDisplay::setBarToMax()
