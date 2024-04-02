@@ -12,7 +12,7 @@ class BubbleWidget : public QDialog
 {
     Q_OBJECT
 public:
-    BubbleWidget(QWidget* const anchor);
+    explicit BubbleWidget(QWidget* const anchor);
     void setText(const QString& text);
     void setBoundary(QWidget* widget) { _boundary = widget; }
 

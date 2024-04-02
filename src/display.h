@@ -19,12 +19,15 @@ class ElementPath : public QObject, public QPainterPath
 {
 public:
     ElementPath(ElementDisplay* start, ElementDisplay* end, QObject* parent);
+    void update();
+    QColor color() const;
+
+private:
     QPointF startPoint() const;
     QPointF endPoint() const;
-    void update();
-    ElementDisplay* start;
-    ElementDisplay* end;
-    bool dirty = true;
+    QPointer<ElementDisplay> _start;
+    QPointer<ElementDisplay> _end;
+    bool _dirty = true;
 };
 
 class ScrollDisplay : public QScrollArea
@@ -32,7 +35,6 @@ class ScrollDisplay : public QScrollArea
     Q_OBJECT
 public:
     explicit ScrollDisplay(QWidget* parent = nullptr);
-    ~ScrollDisplay(){};
 
 protected:
     void paintEvent(QPaintEvent* event) override;
@@ -44,7 +46,6 @@ private slots:
     void setBarToMax();
 
 private:
-
     QPropertyAnimation* _animation;
     Menu* _menu;
     QToolButton* _menuButton;
@@ -55,10 +56,8 @@ class Display : public QWidget
     Q_OBJECT
 public:
     explicit Display(QWidget* parent = nullptr);
-    ~Display(){};
 
     void setEquations(const std::shared_ptr<EquationQueue>& equations);
-    QScrollArea* scrollArea;
 
 public slots:
     void alignElementDisplayContent();
@@ -68,9 +67,7 @@ public slots:
 
 protected:
     void paintEvent(QPaintEvent* event) override;
-    QSize sizeHint() const override {
-        return childrenRect().size();
-    }
+    QSize sizeHint() const override;
     void resizeEvent(QResizeEvent* event) override;
 
 private:
@@ -90,13 +87,10 @@ class ElementDisplay : public QLabel
     Q_OBJECT
     friend Display;
 public:
-    ElementDisplay(QWidget* parent) : ElementDisplay(parent, nullptr) {}
-    ElementDisplay(QWidget* parent, Element* element, bool showConnection = true);
+    explicit ElementDisplay(QWidget* parent, Element* element = nullptr, bool showConnection = true);
 
-    void paintEvent(QPaintEvent* event) override;
-
-    Element* element() const;
-    void setElement(Element* e);
+    const Element* element() const;
+    void setElement(const Element* e);
     std::shared_ptr<QColor> connectColor() const { return _connectColor; }
     void setConnectColor(const std::shared_ptr<QColor>& color) { _connectColor = color; }
 
@@ -104,11 +98,14 @@ public:
     void addNext(ElementDisplay* display);
     void clearAllNext();
 
+protected:
+    void paintEvent(QPaintEvent* event) override;
+
 private slots:
     void updateElementText();
 
 private:
-    QPointer<Element> _element;
+    QPointer<const Element> _element;
     std::vector<QPointer<ElementDisplay>> _nexts;
     QPointer<ElementDisplay> _previous;
     std::shared_ptr<QColor> _connectColor;

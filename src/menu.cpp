@@ -4,7 +4,8 @@
 #include <QPainter>
 
 namespace {
-static const QSize g_menuSize(43, 142);
+constexpr QSize g_menuSize(43, 142);
+const QString g_copiedText = "Copied!";
 }
 
 Menu::Menu(QWidget* parent) : QFrame(parent), ui(new Ui::Menu)
@@ -15,8 +16,7 @@ Menu::Menu(QWidget* parent) : QFrame(parent), ui(new Ui::Menu)
     icon.addFile(QString::fromUtf8(":/Button/correct.png"), QSize(), QIcon::Normal, QIcon::Off);
     ui->copyButton->setClickedIcon(icon);
     ui->copyButton->bubbleWidget()->setBoundary(parent);
-    ui->copyButton->bubbleWidget()->setText("Copied!");
-    // TODO: clear button bug
+    ui->copyButton->bubbleWidget()->setText(g_copiedText);
 }
 
 Menu::~Menu() { delete ui; }

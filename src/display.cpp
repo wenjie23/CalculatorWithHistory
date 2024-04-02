@@ -23,25 +23,33 @@
 #include "menu.h"
 
 namespace {
-static constexpr int g_bigPointSize = 48;
-static constexpr int g_smallPointSize = 20;
+constexpr int g_bigPointSize = 48;
+constexpr int g_smallPointSize = 20;
 
-static const QString g_fontFamily("Arial");
-static constexpr int g_bigFontWidgetHeight = 76;
-static constexpr int g_smallFontWidgetHeight = 36;
+const QString g_fontFamily("Arial");
+constexpr int g_bigFontWidgetHeight = 76;
+constexpr int g_smallFontWidgetHeight = 36;
 
-static constexpr int g_animationDuration = 300;
+constexpr int g_animationDuration = 300;
 
-static constexpr int g_hChannelUpperBount = 361;
-static constexpr int g_sChannel = 92;
-static constexpr int g_lChannel = 158;
-static constexpr double g_connectionLineWidth = 1.6;
-static constexpr QColor g_displayTextColor(38, 39, 42);
-static constexpr QColor g_historyTextColor(90, 90, 90);
+constexpr int g_hChannelUpperBound = 361;
+constexpr int g_sChannel = 92;
+constexpr int g_lChannel = 158;
+constexpr double g_connectionLineWidth = 1.6;
+constexpr QColor g_displayTextColor(38, 39, 42);
+constexpr QColor g_historyTextColor(90, 90, 90);
 
-static constexpr QSize g_menuButtonSize(34, 30);
-static constexpr QPoint g_menuButtonPos(4, 3);
-static const QString g_menuButtonFileName(":/Button/menu_hamburger.png");
+constexpr QSize g_menuButtonSize(34, 30);
+constexpr QPoint g_menuButtonPos(4, 3);
+const QString g_menuButtonFileName(":/Button/menu_hamburger.png");
+
+constexpr QChar g_minusSign = '-';
+constexpr QChar g_leftParenthesis = '(';
+constexpr QChar g_rightParenthesis = ')';
+
+constexpr int g_elementRectDX = 1;
+constexpr int g_elementRectDY = -2;
+constexpr int g_elementRectRadius = 2;
 
 QLayoutItem* lastItemInLayout(QLayout* layout)
 {
@@ -85,23 +93,23 @@ bool changeWidgetsWidthBy(QLayout* layout, int change)
 } // namespace
 
 ElementPath::ElementPath(ElementDisplay* start, ElementDisplay* end, QObject* parent)
-    : QObject(parent), start(start), end(end)
+    : QObject(parent), _start(start), _end(end)
 {
     update();
 }
 
 QPointF ElementPath::startPoint() const
 {
-    if (!start)
+    if (!_start)
         return {};
-    return QPointF(start->pos()) + QPointF(start->width() / 2, start->height());
+    return QPointF(_start->pos()) + QPointF(_start->width() / 2, _start->height());
 }
 
 QPointF ElementPath::endPoint() const
 {
-    if (!end)
+    if (!_end)
         return {};
-    return end->pos() + QPointF(end->width() / 2, 0);
+    return _end->pos() + QPointF(_end->width() / 2, 0);
 }
 
 void ElementPath::update()
@@ -120,6 +128,13 @@ void ElementPath::update()
     const QPointF c1(startP.x() + directionModifier * offsetX, startP.y() + offsetY);
     const QPointF c2(endP.x() - directionModifier * offsetX, endP.y() - offsetY);
     cubicTo(c1, c2, endP);
+}
+
+QColor ElementPath::color() const
+{
+    if (!_start)
+        return {};
+    return *(_start->connectColor());
 }
 
 Display::Display(QWidget* parent) : QWidget(parent)
@@ -270,7 +285,7 @@ void Display::updateConnectionForSecondLastLine()
             dynamic_cast<ElementDisplay*>(secondLastLine->itemAt(column)->widget());
         if (!displayFromPreviousLine)
             continue;
-        auto* const previousLineElement = dynamic_cast<Number*>(displayFromPreviousLine->element());
+        const auto* previousLineElement = dynamic_cast<const Number*>(displayFromPreviousLine->element());
         if (!previousLineElement)
             continue;
         for (int latestDisplayIndex = lastLine->count() - 1; latestDisplayIndex >= 0;
@@ -279,7 +294,7 @@ void Display::updateConnectionForSecondLastLine()
                 dynamic_cast<ElementDisplay*>(lastLine->itemAt(latestDisplayIndex)->widget());
             if (!lastLineDisplay)
                 continue;
-            auto* lastLineElement = dynamic_cast<Number*>(lastLineDisplay->element());
+            const auto* lastLineElement = dynamic_cast<const Number*>(lastLineDisplay->element());
 
             if (lastLineElement && !lastLineDisplay->_previous &&
                 (*previousLineElement) == (*lastLineElement)) {
@@ -309,7 +324,8 @@ void Display::addPath(ElementDisplay* one, ElementDisplay* other)
 {
     if (!one->connectColor()->isValid()) {
         one->connectColor()->setHsl(
-            (std::hash<double>{}(static_cast<Number*>(one->element())->value()) % 361), 92, 158);
+            (std::hash<double>{}(static_cast<const Number*>(one->element())->value()) % g_hChannelUpperBound),
+            g_sChannel, g_lChannel);
     }
     _paths.emplace_back(std::make_unique<ElementPath>(one, other, this));
 }
@@ -321,6 +337,11 @@ void Display::paintEvent(QPaintEvent* event)
         drawPaths();
     }
     QWidget::paintEvent(event);
+}
+
+QSize Display::sizeHint() const
+{
+    return childrenRect().size();
 }
 
 void Display::resizeEvent(QResizeEvent* event)
@@ -336,7 +357,7 @@ void Display::drawPaths()
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
     for (auto& path : _paths) {
-        QPen pen(*(path->start->connectColor()), g_connectionLineWidth);
+        QPen pen(path->color(), g_connectionLineWidth);
         pen.setStyle(Qt::DashLine);
         painter.setPen(pen);
         painter.drawPath(*path);
@@ -428,7 +449,6 @@ void ScrollDisplay::paintEvent(QPaintEvent* event)
     _menu->raise();
     _menuButton->raise();
 }
-bool ElementDisplay::_showConnections = true;
 
 void ScrollDisplay::wheelEvent(QWheelEvent* event)
 {
@@ -496,20 +516,23 @@ void ElementDisplay::paintEvent(QPaintEvent* event)
         pen.setStyle(Qt::DashLine);
         painter.setPen(pen);
         painter.setRenderHint(QPainter::Antialiasing);
-        painter.drawRoundedRect(rect().adjusted(1, 1, -2, -2), 2, 2);
+        painter.drawRoundedRect(
+            rect().adjusted(g_elementRectDX, g_elementRectDX, g_elementRectDY, g_elementRectDY),
+            g_elementRectRadius, g_elementRectRadius);
     }
 }
 
-Element* ElementDisplay::element() const { return _element; }
+const Element* ElementDisplay::element() const { return _element; }
 
-void ElementDisplay::setElement(Element* e)
+void ElementDisplay::setElement(const Element* e)
 {
     if (_element == e)
         return;
     disconnect(e, &Element::changed, this, &ElementDisplay::updateElementText);
-    connect(e, &Element::changed, this, &ElementDisplay::updateElementText);
     _element = e;
     updateElementText();
+    if (_element)
+        connect(_element, &Element::changed, this, &ElementDisplay::updateElementText);
 }
 
 void ElementDisplay::addNext(ElementDisplay* display)
@@ -542,9 +565,11 @@ void ElementDisplay::updateElementText()
     auto textToShow = _element->text();
     if (text() == textToShow)
         return;
-    if (textToShow.size() > 1 && textToShow[0] == QChar('-'))
-        textToShow = QStringLiteral("(") % textToShow % QStringLiteral(")");
+    if (textToShow.size() > 1 && textToShow[0] == g_minusSign)
+        textToShow = g_leftParenthesis % textToShow % g_rightParenthesis;
     setText(textToShow);
 }
+
+bool ElementDisplay::_showConnections = true;
 
 #include "moc_display.cpp"

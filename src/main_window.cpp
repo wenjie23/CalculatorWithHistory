@@ -6,10 +6,13 @@
 #include "ui_main_window.h"
 
 namespace {
-static const QString g_signOperatorText("+/-");
-static const QString g_percentOperatorText("%");
-static const QSize g_windowSize(640, 300);
-static const QFont g_buttonFont(QStringLiteral("Arial"), 25);
+constexpr QChar g_minusSign = '-';
+constexpr QChar g_equalSign = '=';
+const QString g_signOperatorText("+/-");
+const QString g_percentOperatorText("%");
+constexpr QSize g_windowSize(640, 300);
+const QFont g_buttonFont(QStringLiteral("Arial"), 25);
+const QString g_windowTitle("CalculatorWithHistory");
 }
 
 extern const QString g_plus;
@@ -48,7 +51,7 @@ MainWindow::MainWindow(QWidget *parent)
     _equationQueue = std::make_shared<EquationQueue>();
     static_cast<Display*>(ui->display->widget())->setEquations(_equationQueue);
 
-    setWindowTitle("CalculatorWithHistory");
+    setWindowTitle(g_windowTitle);
     setFixedSize(g_windowSize);
     const auto allPButtons = findChildren<QPushButton*>();
     for (auto* button : allPButtons) {
@@ -92,11 +95,11 @@ void MainWindow::unaryOperatorClicked(const QString& op)
     auto* const number = static_cast<Number*>(_equationQueue->back().back().get());
     const auto numberText = number->text();
     if (op == g_signOperatorText) {
-        if (numberText[0] == '-') {
+        if (numberText[0] == g_minusSign) {
             number->trySetValue(numberText.right(numberText.size() - 1));
             emit _equationQueue->changed();
         } else {
-            number->trySetValue(QStringLiteral("-").append(numberText));
+            number->trySetValue(QString(g_minusSign).append(numberText));
             emit _equationQueue->changed();
         }
     } else if (op == g_percentOperatorText) {
@@ -114,7 +117,7 @@ void MainWindow::periodClicked() { _equationQueue->appendDicimal(); }
 
 void MainWindow::equalClicked()
 {
-    _equationQueue->append(QChar('='));
+    _equationQueue->append(g_equalSign);
 }
 
 void MainWindow::enterClicked()

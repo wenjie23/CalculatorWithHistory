@@ -26,30 +26,15 @@ protected:
 class Number : public Element
 {
 public:
-    explicit Number(double v) : Element(QString::number(v, 'g', 15)) {}
+    explicit Number(double v);
     ~Number() = default;
 
     double value() const { return _text.toDouble(); }
-    void setValue(double v)
-    {
-        auto text = QString::number(v, 'g', 15);
-        if (_text == text)
-            return;
-        _text = text;
-        emit changed();
-    }
+    void setValue(double v);
     bool trySetValue(const QString& s);
-    void appendDigit(uint8_t digit)
-    {
-        assert(digit >= 0 && digit <= 9);
-        _text += QString::number(digit, 'g', 15);
-        emit changed();
-    }
+    void appendDigit(uint8_t digit);
     void appendDecimal();
-    friend bool operator==(const Number& a, const Number& b)
-    {
-        return a._text.toDouble() == b._text.toDouble();
-    }
+    friend bool operator==(const Number& a, const Number& b);
 };
 
 class Operator : public Element
@@ -93,11 +78,7 @@ signals:
     void changed();
 
 private:
-    void popFrontIfExceedLimit()
-    {
-        while (size() > _sizeLimit)
-            pop_front();
-    }
+    void popFrontIfExceedLimit();
 
     size_t _sizeLimit;
 };

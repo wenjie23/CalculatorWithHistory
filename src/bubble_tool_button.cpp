@@ -8,10 +8,13 @@
 #include "bubble_tool_button.h"
 
 namespace {
-const int g_arrowWidth = 7;
-const int g_arrowHeight = 10;
-const int g_bubbleRadius = 7;
-const QColor g_bubbleBackground(253, 253, 253);
+constexpr int g_arrowWidth = 7;
+constexpr int g_arrowHeight = 10;
+constexpr int g_bubbleRadius = 7;
+constexpr QColor g_bubbleBackground(253, 253, 253);
+const QString g_defaultBubbleText("Text");
+constexpr int g_bubbleButtonTipTime = 1500;
+constexpr int g_bubbleWidgetContentMargin = 7;
 } // namespace
 
 BubbleWidget::BubbleWidget(QWidget* const anchor)
@@ -22,8 +25,9 @@ BubbleWidget::BubbleWidget(QWidget* const anchor)
     auto* layout = new QHBoxLayout(this);
     layout->addSpacing(g_arrowWidth);
     layout->addWidget(_label);
-    layout->setContentsMargins(QMargins(7, 7, 7, 7));
-    _label->setText("Text");
+    layout->setContentsMargins(QMargins(g_bubbleWidgetContentMargin, g_bubbleWidgetContentMargin,
+                                        g_bubbleWidgetContentMargin, g_bubbleWidgetContentMargin));
+    _label->setText(g_defaultBubbleText);
     setLayout(layout);
     setAttribute(Qt::WA_TranslucentBackground);
     move(_anchor->mapToGlobal(QPoint(_anchor->width(), _anchor->height() / 2 - height() / 2)));
@@ -99,7 +103,7 @@ BubbleToolButton::BubbleToolButton(QWidget* parent)
 {
     connect(this, &QToolButton::clicked, this, &BubbleToolButton::onClicked);
     _timer.setSingleShot(true);
-    _timer.setInterval(1500);
+    _timer.setInterval(g_bubbleButtonTipTime);
     connect(&_timer, &QTimer::timeout, this, &BubbleToolButton::onTimeOut, Qt::QueuedConnection);
 }
 

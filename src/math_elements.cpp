@@ -4,7 +4,6 @@
 
 #include <QString>
 #include <QDebug>
-#include <iostream>
 
 #include "math_elements.h"
 
@@ -12,6 +11,9 @@ extern const QString g_plus("+");
 extern const QString g_minus("-");
 extern const QString g_multiply("×");
 extern const QString g_divide("÷");
+extern const QString g_equal("=");
+extern const QString g_point(".");
+const int g_minimumElementCountToCalc = 4;
 
 namespace {
 double calculateImpl(double left, double right, const QString& op)
@@ -29,10 +31,15 @@ double calculateImpl(double left, double right, const QString& op)
         return -1;
     }
 }
+
+bool isEqualWithEpsilon(double a, double b)
+{
+    return std::abs(a - b) < std::numeric_limits<double>::epsilon();
+}
 } // namespace
 double Equation::calculate() const
 {
-    if (size() < 4)
+    if (size() < g_minimumElementCountToCalc)
         throw std::invalid_argument("Invalid");
     std::deque<std::shared_ptr<Element>> calcuationStack;
     calcuationStack.push_back((*this)[0]);
@@ -83,10 +90,10 @@ void Equation::append(const QString& op)
 {
     if (empty() || completed() || dynamic_cast<Operator*>(back().get()))
         return;
-    if (size() < 3 && op == QString("="))
+    if (size() < 3 && op == g_equal)
         return;
     push_back(std::make_shared<Operator>(op));
-    if (op == QString("=")) {
+    if (op == g_equal) {
         const double result = calculate();
         push_back(std::make_shared<Number>(result));
         _completed = true;
@@ -137,6 +144,17 @@ bool Equation::tryPopCharacter()
     return true;
 }
 
+Number::Number(double v) : Element(QString::number(v, 'g', 15)) {}
+
+void Number::setValue(double v)
+{
+    auto text = QString::number(v, 'g', 15);
+    if (_text == text)
+        return;
+    _text = text;
+    emit changed();
+}
+
 bool Number::trySetValue(const QString& s)
 {
     bool ok;
@@ -148,6 +166,13 @@ bool Number::trySetValue(const QString& s)
     return true;
 }
 
+void Number::appendDigit(uint8_t digit)
+{
+    assert(digit >= 0 && digit <= 9);
+    _text += QString::number(digit, 'g', 15);
+    emit changed();
+}
+
 void Number::appendDecimal()
 {
     bool ok;
@@ -157,6 +182,11 @@ void Number::appendDecimal()
         _text = newText;
         emit changed();
     }
+}
+
+bool operator==(const Number &a, const Number &b)
+{
+    return std::abs(a._text.toDouble() - b._text.toDouble()) < std::numeric_limits<double>::epsilon();
 }
 
 Operator::Operator(const QString& op) : Element(op) {}
@@ -210,6 +240,12 @@ void EquationQueue::tryPopLastCharacter()
         return;
     back().tryPopCharacter();
     emit changed();
+}
+
+void EquationQueue::popFrontIfExceedLimit()
+{
+    while (size() > _sizeLimit)
+        pop_front();
 }
 
 QString EquationQueue::text() const
